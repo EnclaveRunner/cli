@@ -50,9 +50,12 @@ func newModel() *ConfigModel {
 		}
 	}
 
+	baseColumnStyle := lipgloss.NewStyle().Align(lipgloss.Left).Padding(0, 1)
+
 	columns := []table.Column{
-		table.NewFlexColumn(columnParamID, "Parameter", 1),
-		table.NewColumn(columnValueID, "Value", largestValue),
+		table.NewFlexColumn(columnParamID, " Parameter", 1),
+		table.NewColumn(columnValueID, " Value", largestValue).
+			WithStyle(lipgloss.NewStyle().Foreground(lipgloss.Color("3"))),
 	}
 
 	rows := make([]table.Row, len(values))
@@ -63,7 +66,9 @@ func newModel() *ConfigModel {
 		})
 	}
 
-	tableModel := table.New(columns).WithRows(rows)
+	tableModel := table.New(columns).BorderRounded().WithBaseStyle(baseColumnStyle).
+		HeaderStyle(lipgloss.NewStyle().Bold(true)).
+		WithRows(rows)
 
 	return &ConfigModel{
 		configTable: tableModel,
@@ -82,6 +87,11 @@ func parseValues(val reflect.Value, prefix string) [][]string {
 		val = val.Elem()
 	}
 
+	// Handle interfaces by getting the underlying value
+	if val.Kind() == reflect.Interface {
+		val = val.Elem()
+	}
+
 	switch val.Kind() {
 	case reflect.Struct:
 		values := [][]string{}
@@ -95,7 +105,7 @@ func parseValues(val reflect.Value, prefix string) [][]string {
 		return values
 	default:
 		return [][]string{
-			{prefix[:len(prefix)-1], fmt.Sprintf("%v", val.Interface())},
+			{fmt.Sprintf(" %v ", prefix[:len(prefix)-1]), fmt.Sprintf(" %v ", val.Interface())},
 		}
 	}
 }
@@ -107,9 +117,10 @@ func (m *ConfigModel) Init() tea.Cmd {
 func (m *ConfigModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
-	switch msg.(type) {
-	case tea.WindowSizeMsg:
-		m.configTable.WithTargetWidth(msg.Width - 2)
+	if windowSizeMsg, ok := msg.(tea.WindowSizeMsg); ok {
+		m.configTable.WithTargetWidth(windowSizeMsg.Width - 2)
+
+		return m, tea.Quit
 	}
 
 	m.configTable, cmd = m.configTable.Update(msg)

@@ -59,7 +59,7 @@ func Init(v *viper.Viper) {
 	configFileSet := v.ConfigFileUsed() != ""
 	if !configFileSet {
 		// Set config name and type
-		v.SetConfigName("cli")
+		v.SetConfigName("cli.yml")
 		v.SetConfigType("yaml")
 
 		// Add config paths in order of precedence (last added has lowest
