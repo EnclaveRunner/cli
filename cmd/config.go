@@ -29,6 +29,8 @@ var configCmd = &cobra.Command{
 	},
 }
 
+const tablePadding = 1
+
 func init() {
 	rootCmd.AddCommand(configCmd)
 }
@@ -50,7 +52,7 @@ func newModel() *ConfigModel {
 		}
 	}
 
-	baseColumnStyle := lipgloss.NewStyle().Align(lipgloss.Left).Padding(0, 1)
+	baseColumnStyle := lipgloss.NewStyle().Align(lipgloss.Left)
 
 	columns := []table.Column{
 		table.NewFlexColumn(columnParamID, " Parameter", 1),
@@ -66,7 +68,9 @@ func newModel() *ConfigModel {
 		})
 	}
 
-	tableModel := table.New(columns).BorderRounded().WithBaseStyle(baseColumnStyle).
+	tableModel := table.New(columns).
+		BorderRounded().
+		WithBaseStyle(baseColumnStyle).
 		HeaderStyle(lipgloss.NewStyle().Bold(true)).
 		WithRows(rows)
 
@@ -92,6 +96,7 @@ func parseValues(val reflect.Value, prefix string) [][]string {
 		val = val.Elem()
 	}
 
+	//nolint:exhaustive // Only handling struct and basic types
 	switch val.Kind() {
 	case reflect.Struct:
 		values := [][]string{}
@@ -105,7 +110,10 @@ func parseValues(val reflect.Value, prefix string) [][]string {
 		return values
 	default:
 		return [][]string{
-			{fmt.Sprintf(" %v ", prefix[:len(prefix)-1]), fmt.Sprintf(" %v ", val.Interface())},
+			{
+				fmt.Sprintf(" %v ", prefix[:len(prefix)-1]),
+				fmt.Sprintf(" %v ", val.Interface()),
+			},
 		}
 	}
 }
@@ -118,7 +126,7 @@ func (m *ConfigModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	if windowSizeMsg, ok := msg.(tea.WindowSizeMsg); ok {
-		m.configTable.WithTargetWidth(windowSizeMsg.Width - 2)
+		m.configTable.WithTargetWidth(windowSizeMsg.Width - tablePadding*2)
 
 		return m, tea.Quit
 	}
@@ -133,7 +141,7 @@ func (m *ConfigModel) View() string {
 
 	body.WriteString("Current configuration of the enclave CLI\n")
 
-	pad := lipgloss.NewStyle().Padding(1)
+	pad := lipgloss.NewStyle().Padding(tablePadding)
 
 	configTable := pad.Render(m.configTable.View())
 

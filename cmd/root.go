@@ -69,7 +69,7 @@ func init() {
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to bind flag")
 	}
-	v.BindPFlag(
+	err = v.BindPFlag(
 		"auth.username",
 		rootCmd.PersistentFlags().Lookup("auth-username"),
 	)
