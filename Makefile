@@ -1,4 +1,4 @@
-.PHONY: test test-verbose test-coverage test-race bench clean fmt lint
+.PHONY: test test-verbose test-coverage test-race bench clean fmt lint oapi
 
 # Default target
 all: test
@@ -36,6 +36,10 @@ lint:
 # Clean test cache
 clean:
 	go clean -testcache
+
+# Generate OpenAPI server code from spec
+oapi:
+	go generate tools.go
 
 # Show help
 help:
