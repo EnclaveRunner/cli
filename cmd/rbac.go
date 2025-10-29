@@ -37,14 +37,16 @@ var rbacRoleCreateCmd = &cobra.Command{
 			Role: role,
 		}
 
-		resp, err := c.PostRbacRole(ctx, body)
+		resp, err := c.PostRbacRoleWithResponse(ctx, body)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to create role")
 			os.Exit(1)
 		}
-		defer resp.Body.Close()
 
-		handleResponse(resp, "Role created successfully")
+		ok := handleResponse(resp.HTTPResponse, "Role created successfully")
+		if !ok {
+			os.Exit(1)
+		}
 	},
 }
 
@@ -63,14 +65,16 @@ var rbacRoleDeleteCmd = &cobra.Command{
 			Role: role,
 		}
 
-		resp, err := c.DeleteRbacRole(ctx, body)
+		resp, err := c.DeleteRbacRoleWithResponse(ctx, body)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to delete role")
 			os.Exit(1)
 		}
-		defer resp.Body.Close()
 
-		handleResponse(resp, "Role deleted successfully")
+		ok := handleResponse(resp.HTTPResponse, "Role deleted successfully")
+		if !ok {
+			os.Exit(1)
+		}
 	},
 }
 
@@ -83,14 +87,18 @@ var rbacRoleListCmd = &cobra.Command{
 		c := getClient()
 		ctx := context.Background()
 
-		resp, err := c.GetRbacListRoles(ctx)
+		resp, err := c.GetRbacListRolesWithResponse(ctx)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to list roles")
 			os.Exit(1)
 		}
-		defer resp.Body.Close()
 
-		handleResponse(resp, "")
+		ok := handleResponse(resp.HTTPResponse, "")
+		if !ok {
+			os.Exit(1)
+		} else {
+			printSlice(*resp.JSON200)
+		}
 	},
 }
 
@@ -109,14 +117,20 @@ var rbacRoleGetCmd = &cobra.Command{
 			Role: role,
 		}
 
-		resp, err := c.GetRbacRole(ctx, params)
+		resp, err := c.GetRbacRoleWithResponse(ctx, params)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to get role users")
 			os.Exit(1)
 		}
-		defer resp.Body.Close()
 
-		handleResponse(resp, "")
+		ok := handleResponse(resp.HTTPResponse, "")
+		if !ok {
+			os.Exit(1)
+		}
+
+		users, err := getUsersByIds(ctx, *resp.JSON200)
+		
+		printUsers(users)
 	},
 }
 

@@ -1,14 +1,8 @@
 package cmd
 
 import (
-	"bytes"
 	"cli/client"
-	"cli/config"
 	"context"
-	"encoding/json"
-	"fmt"
-	"io"
-	"net/http"
 	"os"
 
 	"github.com/rs/zerolog/log"
@@ -89,7 +83,8 @@ var userUpdateCmd = &cobra.Command{
 		newPassword, _ := cmd.Flags().GetString("new-password")
 
 		if newName == "" && newDisplayName == "" && newPassword == "" {
-			log.Error().Msg("at least one of --new-name, --new-display-name, or --new-password must be provided")
+			log.Error().
+				Msg("at least one of --new-name, --new-display-name, or --new-password must be provided")
 			os.Exit(1)
 		}
 
@@ -204,7 +199,8 @@ var userMeUpdateCmd = &cobra.Command{
 		newPassword, _ := cmd.Flags().GetString("new-password")
 
 		if newName == "" && newDisplayName == "" && newPassword == "" {
-			log.Error().Msg("at least one of --new-name, --new-display-name, or --new-password must be provided")
+			log.Error().
+				Msg("at least one of --new-name, --new-display-name, or --new-password must be provided")
 			os.Exit(1)
 		}
 
@@ -262,57 +258,4 @@ func init() {
 	userMeUpdateCmd.Flags().String("new-name", "", "New user name")
 	userMeUpdateCmd.Flags().String("new-display-name", "", "New display name")
 	userMeUpdateCmd.Flags().String("new-password", "", "New password")
-}
-
-func getClient() *client.Client {
-	if config.Cfg.APIServerURL == "" {
-		log.Error().Msg("API server URL not configured")
-		os.Exit(1)
-	}
-
-	if config.Cfg.Auth == nil {
-		log.Error().Msg("Authentication not configured")
-		os.Exit(1)
-	}
-
-	c, err := client.NewClient(config.Cfg.APIServerURL, client.WithRequestEditorFn(func(ctx context.Context, req *http.Request) error {
-		req.Header.Set("Authorization", config.Cfg.Auth.GetAuthHeader())
-		return nil
-	}))
-
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to create API client")
-		os.Exit(1)
-	}
-
-	return c
-}
-
-func handleResponse(resp *http.Response, successMsg string) {
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to read response body")
-		os.Exit(1)
-	}
-
-	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-		if successMsg != "" {
-			log.Info().Msg(successMsg)
-		}
-		if len(body) > 0 {
-			// Try to pretty print JSON
-			var prettyJSON bytes.Buffer
-			if err := json.Indent(&prettyJSON, body, "", "  "); err == nil {
-				fmt.Println(prettyJSON.String())
-			} else {
-				fmt.Println(string(body))
-			}
-		}
-	} else {
-		log.Error().Int("status", resp.StatusCode).Msg("Request failed")
-		if len(body) > 0 {
-			fmt.Fprintln(os.Stderr, string(body))
-		}
-		os.Exit(1)
-	}
 }

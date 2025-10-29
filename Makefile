@@ -31,7 +31,7 @@ fmt:
 
 # Lint code (requires golangci-lint to be installed)
 lint:
-	golangci-lint run
+	golangci-lint run --fix
 
 # Clean test cache
 clean:

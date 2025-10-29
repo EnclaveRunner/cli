@@ -16,7 +16,7 @@ var (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "enclave <command>",
+	Use:   "encl <command>",
 	Short: "Manage you enclave platform from your terminal",
 	Long: `Enclave CLI is a command line interface to manage your enclave platform.
 Run the cli without a command to start the interactive tui or use one of the available commands
