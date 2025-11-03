@@ -6,6 +6,6 @@ import (
 )
 
 func main() {
-	config.Version = "v0.1.3"
+	config.Version = "v0.1.4"
 	cmd.Execute()
 }
