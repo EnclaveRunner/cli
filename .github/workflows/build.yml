@@ -80,15 +80,6 @@ jobs:
           echo "OUTPUT_NAME=${OUTPUT_NAME}" >> $GITHUB_ENV
         shell: bash
 
-      - name: Create checksum
-        run: |
-          if [ "${{ matrix.os }}" = "windows" ]; then
-            sha256sum "${OUTPUT_NAME}" > "${OUTPUT_NAME}.sha256"
-          else
-            shasum -a 256 "${OUTPUT_NAME}" > "${OUTPUT_NAME}.sha256"
-          fi
-        shell: bash
-
       - name: Upload binary to release
         uses: actions/upload-release-asset@v1
         env:

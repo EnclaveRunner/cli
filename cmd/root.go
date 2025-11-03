@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"cli/config"
+	"fmt"
 	"os"
 
 	"github.com/rs/zerolog"
@@ -34,6 +35,11 @@ to perform specific actions directly.`,
 		config.Init(v)
 	},
 	Run: func(cmd *cobra.Command, args []string) {
+		if versionFlag, err := cmd.Flags().GetBool("version"); err == nil && versionFlag {
+			fmt.Println(config.Version)
+
+			return
+		}
 		log.Error().Msg("TUI is currently not implemented.")
 	},
 	CompletionOptions: cobra.CompletionOptions{},
@@ -60,6 +66,8 @@ func init() {
 		String("auth-username", "", "Authentication username")
 	rootCmd.PersistentFlags().
 		String("auth-password", "", "Authentication password")
+
+	rootCmd.Flags().BoolP("version", "v", false, "Display the cli version")
 
 	// Bind flags to viper
 	err := v.BindPFlag(

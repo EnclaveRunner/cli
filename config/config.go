@@ -13,6 +13,8 @@ import (
 // Cfg is the global configuration instance
 var Cfg Config
 
+var Version string
+
 type Config struct {
 	APIServerURL string     `mapstructure:"api_server_url"`
 	Auth         AuthConfig `mapstructure:"-"`
