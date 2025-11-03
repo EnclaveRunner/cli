@@ -7,8 +7,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"reflect"
+	"strconv"
 	"sync"
 
 	"github.com/charmbracelet/lipgloss"
@@ -42,33 +42,33 @@ func getClient() *client.ClientWithResponses {
 	return c
 }
 
-// ResponseWithBody is an interface that matches all generated API response types
+// ResponseWithBody is an interface that matches all generated API response
+// types
 // All response types have StatusCode() method and Body field
 type ResponseWithBody interface {
 	StatusCode() int
 }
 
-// handleResponse safely handles API responses, checking for nil before accessing fields
+// handleResponse safely handles API responses, checking for nil before
+// accessing fields
 // This prevents segfaults when an error occurs and resp is nil
-// It uses reflection to safely access the Body field which exists on all response types
-func handleResponse(resp ResponseWithBody, err error, successMsg string) bool {
+// It uses reflection to safely access the Body field which exists on all
+// response types
+func handleResponse(resp ResponseWithBody, err error, successMsg string) {
 	if err != nil {
-		log.Error().Err(err).Msg("Request failed")
-
-		return false
+		log.Fatal().Err(err).Msg("Request failed")
 	}
 
 	if resp == nil {
-		log.Error().Msg("Request failed: no response received")
-
-		return false
+		log.Fatal().Msg("Request failed: no response received")
 	}
 
 	// Extract body using reflection to safely access the Body field
 	// All generated response types have: Body []byte field
 	var body []byte
 
-	// Use reflection to access the Body field - all response types have this field
+	// Use reflection to access the Body field - all response types have this
+	// field
 	respValue := reflect.ValueOf(resp)
 	if respValue.Kind() == reflect.Pointer {
 		respValue = respValue.Elem()
@@ -89,44 +89,33 @@ func handleResponse(resp ResponseWithBody, err error, successMsg string) bool {
 			log.Info().Msg(TextPrimary.Render(successMsg))
 		}
 
-		return true
-
 	case resp.StatusCode() == http.StatusUnauthorized:
-		log.Error().Msg("Unauthorized: Invalid credentials")
-
-		return false
+		log.Fatal().Msg("Unauthorized: Invalid credentials")
 
 	case resp.StatusCode() == http.StatusForbidden:
-		log.Error().
+		log.Fatal().
 			Msg("Forbidden: You do not have permission to perform this action")
 
-		return false
-
 	case resp.StatusCode() == http.StatusNotFound:
-		log.Error().Msg("Not Found: The requested resource does not exist")
-
-		return false
+		log.Fatal().Msg("Not Found: The requested resource does not exist")
 
 	case resp.StatusCode() == http.StatusInternalServerError:
-		log.Error().
+		log.Fatal().
 			Msg("Internal Server Error: An error occurred on the server. Look at the server logs for more details.")
 
-		return false
-
 	default:
-		log.Error().Msgf("Request failed with status code %d", resp.StatusCode())
 		if len(body) > 0 {
-
 			// Check if body is json with error field
 			var dest client.ErrGeneric
 			if err := json.Unmarshal(body, &dest); err != nil {
-				log.Error().Msgf("Error: %s", string(body))
+				log.Fatal().
+					Msgf("Request failed with status code %d: %s", resp.StatusCode(), string(body))
 			} else {
-				log.Error().Msgf("Error: %s", dest.Error)
+				log.Fatal().Msgf("Request failed with status code %d: %s", resp.StatusCode(), dest.Error)
 			}
+		} else {
+			log.Fatal().Msgf("Request failed with status code %d", resp.StatusCode())
 		}
-
-		return false
 	}
 }
 
@@ -154,8 +143,8 @@ func printRoles(roles []RoleInfo) {
 	for i, role := range roles {
 		data[i] = []string{
 			role.Role,
-			fmt.Sprintf("%d", role.UserCount),
-			fmt.Sprintf("%d", role.PolicyCount),
+			strconv.Itoa(role.UserCount),
+			strconv.Itoa(role.PolicyCount),
 		}
 	}
 
@@ -176,8 +165,8 @@ func printResourceGroups(groups []ResourceGroupInfo) {
 	for i, group := range groups {
 		data[i] = []string{
 			group.ResourceGroup,
-			fmt.Sprintf("%d", group.EndpointCount),
-			fmt.Sprintf("%d", group.PolicyCount),
+			strconv.Itoa(group.EndpointCount),
+			strconv.Itoa(group.PolicyCount),
 		}
 	}
 
@@ -185,6 +174,8 @@ func printResourceGroups(groups []ResourceGroupInfo) {
 }
 
 // getRoleInfo fetches role metadata (user count and policy count)
+//
+//nolint:dupl // Similar code exists for resource groups
 func getRoleInfo(ctx context.Context, roles []string) []RoleInfo {
 	c := getClient()
 
@@ -196,6 +187,7 @@ func getRoleInfo(ctx context.Context, roles []string) []RoleInfo {
 		for i, role := range roles {
 			result[i] = RoleInfo{Role: role, UserCount: 0, PolicyCount: 0}
 		}
+
 		return result
 	}
 
@@ -257,8 +249,14 @@ func getRoleInfo(ctx context.Context, roles []string) []RoleInfo {
 	return result
 }
 
-// getResourceGroupInfo fetches resource group metadata (endpoint count and policy count)
-func getResourceGroupInfo(ctx context.Context, resourceGroups []string) []ResourceGroupInfo {
+// getResourceGroupInfo fetches resource group metadata (endpoint count and
+// policy count)
+//
+//nolint:dupl // Similar code exists for roles
+func getResourceGroupInfo(
+	ctx context.Context,
+	resourceGroups []string,
+) []ResourceGroupInfo {
 	c := getClient()
 
 	// Get all policies to count per resource group
@@ -267,8 +265,13 @@ func getResourceGroupInfo(ctx context.Context, resourceGroups []string) []Resour
 		// If we can't get policies, return groups with zero counts
 		result := make([]ResourceGroupInfo, len(resourceGroups))
 		for i, rg := range resourceGroups {
-			result[i] = ResourceGroupInfo{ResourceGroup: rg, EndpointCount: 0, PolicyCount: 0}
+			result[i] = ResourceGroupInfo{
+				ResourceGroup: rg,
+				EndpointCount: 0,
+				PolicyCount:   0,
+			}
 		}
+
 		return result
 	}
 
@@ -277,7 +280,11 @@ func getResourceGroupInfo(ctx context.Context, resourceGroups []string) []Resour
 	// Count policies per resource group
 	rgCounts := make(map[string]*ResourceGroupInfo)
 	for _, rg := range resourceGroups {
-		rgCounts[rg] = &ResourceGroupInfo{ResourceGroup: rg, EndpointCount: 0, PolicyCount: 0}
+		rgCounts[rg] = &ResourceGroupInfo{
+			ResourceGroup: rg,
+			EndpointCount: 0,
+			PolicyCount:   0,
+		}
 	}
 
 	for _, policy := range policies {
@@ -335,69 +342,6 @@ type EndpointInfo struct {
 	ResourceGroup string
 }
 
-func printEndpoints(endpoints []EndpointInfo) {
-	data := make([][]string, len(endpoints))
-	headers := []string{"ENDPOINT", "RESOURCE GROUP"}
-
-	for i, ep := range endpoints {
-		data[i] = []string{
-			ep.Endpoint,
-			ep.ResourceGroup,
-		}
-	}
-
-	printTable(data, headers)
-}
-
-// getEndpointInfo fetches endpoint metadata (resource group assignment)
-func getEndpointInfo(ctx context.Context, endpoints []string) []EndpointInfo {
-	c := getClient()
-
-	type endpointRG struct {
-		endpoint      string
-		resourceGroup string
-	}
-
-	resultChan := make(chan endpointRG, len(endpoints))
-	var wg sync.WaitGroup
-
-	for _, ep := range endpoints {
-		wg.Add(1)
-		go func(e string) {
-			defer wg.Done()
-			params := &client.GetRbacEndpointParams{Endpoint: e}
-			resp, err := c.GetRbacEndpointWithResponse(ctx, params)
-			if err == nil && resp.JSON200 != nil && len(*resp.JSON200) > 0 {
-				resultChan <- endpointRG{endpoint: e, resourceGroup: (*resp.JSON200)[0]}
-			} else {
-				resultChan <- endpointRG{endpoint: e, resourceGroup: "-"}
-			}
-		}(ep)
-	}
-
-	go func() {
-		wg.Wait()
-		close(resultChan)
-	}()
-
-	// Collect results
-	epMap := make(map[string]string)
-	for result := range resultChan {
-		epMap[result.endpoint] = result.resourceGroup
-	}
-
-	// Convert to slice in original order
-	result := make([]EndpointInfo, len(endpoints))
-	for i, ep := range endpoints {
-		result[i] = EndpointInfo{
-			Endpoint:      ep,
-			ResourceGroup: epMap[ep],
-		}
-	}
-
-	return result
-}
-
 func printUser(user *client.UserResponse) {
 	data := [][]string{
 		{user.Id, user.Name, user.DisplayName},
@@ -424,7 +368,7 @@ func printUsers(users []*client.UserResponse) {
 func printTable(data [][]string, headers []string) {
 	baseStyle := lipgloss.NewStyle().Padding(0, 1)
 	headerStyle := baseStyle.Bold(true)
-	rowStyle := baseStyle.Foreground(lipgloss.Color(ColorPrimary))
+	rowStyle := baseStyle.Foreground(ColorPrimary)
 
 	t := table.New().
 		BorderBottom(false).
@@ -471,17 +415,18 @@ func getUserById(ctx context.Context, userId string) *client.UserResponse {
 
 	resp, err := c.GetUsersUserWithResponse(ctx, params)
 
-	if !handleResponse(resp, err, "") {
-		os.Exit(1)
-	}
+	handleResponse(resp, err, "")
 
 	return resp.JSON200
 }
 
 // getUsersByIds fetches multiple users concurrently by their IDs
-func getUsersByIds(ctx context.Context, userIds []string) ([]*client.UserResponse, error) {
+func getUsersByIds(
+	ctx context.Context,
+	userIds []string,
+) []*client.UserResponse {
 	if len(userIds) == 0 {
-		return []*client.UserResponse{}, nil
+		return []*client.UserResponse{}
 	}
 
 	type userResult struct {
@@ -522,10 +467,11 @@ func getUsersByIds(ctx context.Context, userIds []string) ([]*client.UserRespons
 		for i, err := range errs {
 			errMsg += fmt.Sprintf("\n  [%d] %v", i+1, err)
 		}
-		return nil, fmt.Errorf("%s", errMsg)
+
+		log.Fatal().Msg(errMsg)
 	}
 
-	return users, nil
+	return users
 }
 
 func getUserByName(ctx context.Context, username string) *client.UserResponse {
@@ -536,9 +482,7 @@ func getUserByName(ctx context.Context, username string) *client.UserResponse {
 
 	resp, err := c.GetUsersUserWithResponse(ctx, params)
 
-	if !handleResponse(resp, err, "") {
-		os.Exit(1)
-	}
+	handleResponse(resp, err, "")
 
 	return resp.JSON200
 }

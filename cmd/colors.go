@@ -8,6 +8,7 @@ const (
 )
 
 var (
-	TextPrimary   = lipgloss.NewStyle().Foreground(lipgloss.Color(ColorPrimary))
-	TextHighlight = lipgloss.NewStyle().Foreground(lipgloss.Color(ColorTextHighlight))
+	TextPrimary   = lipgloss.NewStyle().Foreground(ColorPrimary)
+	TextHighlight = lipgloss.NewStyle().
+			Foreground(ColorTextHighlight)
 )

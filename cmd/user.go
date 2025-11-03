@@ -1,3 +1,4 @@
+//nolint:mnd // Magic numbers allowed for command args
 package cmd
 
 import (
@@ -38,10 +39,7 @@ var userCreateCmd = &cobra.Command{
 
 		successMsg := "User created successfully"
 
-		ok := handleResponse(resp, err, successMsg)
-		if !ok {
-			os.Exit(1)
-		}
+		handleResponse(resp, err, successMsg)
 	},
 }
 
@@ -66,10 +64,7 @@ var userDeleteCmd = &cobra.Command{
 
 		successMsg := "User deleted successfully"
 
-		ok := handleResponse(resp, err, successMsg)
-		if !ok {
-			os.Exit(1)
-		}
+		handleResponse(resp, err, successMsg)
 	},
 }
 
@@ -85,7 +80,7 @@ var userUpdateCmd = &cobra.Command{
 		newPassword, _ := cmd.Flags().GetString("new-password")
 
 		if newName == "" && newDisplayName == "" && newPassword == "" {
-			log.Error().
+			log.Fatal().
 				Msg("at least one of --new-name, --new-display-name, or --new-password must be provided")
 			os.Exit(1)
 		}
@@ -113,10 +108,7 @@ var userUpdateCmd = &cobra.Command{
 
 		successMsg := "User updated successfully"
 
-		ok := handleResponse(resp, err, successMsg)
-		if !ok {
-			os.Exit(1)
-		}
+		handleResponse(resp, err, successMsg)
 	},
 }
 
@@ -147,17 +139,14 @@ var userListCmd = &cobra.Command{
 
 		resp, err := c.GetUsersListWithResponse(ctx)
 
-		ok := handleResponse(resp, err, "")
-		if !ok {
-			os.Exit(1)
-		} else {
-			// Convert []UserResponse to []*UserResponse
-			users := make([]*client.UserResponse, len(*resp.JSON200))
-			for i := range *resp.JSON200 {
-				users[i] = &(*resp.JSON200)[i]
-			}
-			printUsers(users)
+		handleResponse(resp, err, "")
+
+		// Convert []UserResponse to []*UserResponse
+		users := make([]*client.UserResponse, len(*resp.JSON200))
+		for i := range *resp.JSON200 {
+			users[i] = &(*resp.JSON200)[i]
 		}
+		printUsers(users)
 	},
 }
 
@@ -178,12 +167,9 @@ var userMeGetCmd = &cobra.Command{
 
 		resp, err := c.GetUsersMeWithResponse(ctx)
 
-		ok := handleResponse(resp, err, "")
-		if !ok {
-			os.Exit(1)
-		} else {
-			printUser(resp.JSON200)
-		}
+		handleResponse(resp, err, "")
+
+		printUser(resp.JSON200)
 	},
 }
 
@@ -222,10 +208,7 @@ var userMeUpdateCmd = &cobra.Command{
 
 		successMsg := "Current user updated successfully"
 
-		ok := handleResponse(resp, err, successMsg)
-		if !ok {
-			os.Exit(1)
-		}
+		handleResponse(resp, err, successMsg)
 	},
 }
 

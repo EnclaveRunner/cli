@@ -1,10 +1,10 @@
+//nolint:mnd // Magic numbers allowed for command argument count
 package cmd
 
 import (
 	"cli/client"
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
 )
@@ -41,10 +41,7 @@ var rbacRoleCreateCmd = &cobra.Command{
 
 		successMsg := fmt.Sprintf("Role '%s' created", TextHighlight.Render(role))
 
-		ok := handleResponse(resp, err, successMsg)
-		if !ok {
-			os.Exit(1)
-		}
+		handleResponse(resp, err, successMsg)
 	},
 }
 
@@ -67,10 +64,7 @@ var rbacRoleDeleteCmd = &cobra.Command{
 
 		successMsg := fmt.Sprintf("Role '%s deleted", TextHighlight.Render(role))
 
-		ok := handleResponse(resp, err, successMsg)
-		if !ok {
-			os.Exit(1)
-		}
+		handleResponse(resp, err, successMsg)
 	},
 }
 
@@ -85,13 +79,10 @@ var rbacRoleListCmd = &cobra.Command{
 
 		resp, err := c.GetRbacListRolesWithResponse(ctx)
 
-		ok := handleResponse(resp, err, "")
-		if !ok {
-			os.Exit(1)
-		} else {
-			roleInfo := getRoleInfo(ctx, *resp.JSON200)
-			printRoles(roleInfo)
-		}
+		handleResponse(resp, err, "")
+
+		roleInfo := getRoleInfo(ctx, *resp.JSON200)
+		printRoles(roleInfo)
 	},
 }
 
@@ -112,12 +103,9 @@ var rbacRoleGetCmd = &cobra.Command{
 
 		resp, err := c.GetRbacRoleWithResponse(ctx, params)
 
-		ok := handleResponse(resp, err, "")
-		if !ok {
-			os.Exit(1)
-		}
+		handleResponse(resp, err, "")
 
-		users, err := getUsersByIds(ctx, *resp.JSON200)
+		users := getUsersByIds(ctx, *resp.JSON200)
 
 		printUsers(users)
 	},
@@ -144,17 +132,22 @@ var rbacUserAssignCmd = &cobra.Command{
 
 		user := getUserByName(ctx, username)
 
-		assignReq, err := c.PostRbacUserWithResponse(ctx, client.PostRbacUserJSONRequestBody{
-			UserId: user.Id,
-			Role:   role,
-		})
+		assignReq, err := c.PostRbacUserWithResponse(
+			ctx,
+			client.PostRbacUserJSONRequestBody{
+				UserId: user.Id,
+				Role:   role,
+			},
+		)
 
-		successMsg := fmt.Sprintf("%s (%s) has role %s now", TextHighlight.Render(user.DisplayName), TextHighlight.Render(user.Id), TextHighlight.Render(role))
+		successMsg := fmt.Sprintf(
+			"%s (%s) has role %s now",
+			TextHighlight.Render(user.DisplayName),
+			TextHighlight.Render(user.Id),
+			TextHighlight.Render(role),
+		)
 
-		ok := handleResponse(assignReq, err, successMsg)
-		if !ok {
-			os.Exit(1)
-		}
+		handleResponse(assignReq, err, successMsg)
 	},
 }
 
@@ -179,12 +172,14 @@ var rbacUserRemoveCmd = &cobra.Command{
 
 		resp, err := c.DeleteRbacUserWithResponse(ctx, body)
 
-		successMsg := fmt.Sprintf("Role %s removed from %s (%s)", TextHighlight.Render(role), TextHighlight.Render(user.DisplayName), TextHighlight.Render(user.Id))
+		successMsg := fmt.Sprintf(
+			"Role %s removed from %s (%s)",
+			TextHighlight.Render(role),
+			TextHighlight.Render(user.DisplayName),
+			TextHighlight.Render(user.Id),
+		)
 
-		ok := handleResponse(resp, err, successMsg)
-		if !ok {
-			os.Exit(1)
-		}
+		handleResponse(resp, err, successMsg)
 	},
 }
 
@@ -207,13 +202,10 @@ var rbacUserGetCmd = &cobra.Command{
 
 		resp, err := c.GetRbacUserWithResponse(ctx, params)
 
-		ok := handleResponse(resp, err, "")
-		if !ok {
-			os.Exit(1)
-		} else {
-			roleInfo := getRoleInfo(ctx, *resp.JSON200)
-			printRoles(roleInfo)
-		}
+		handleResponse(resp, err, "")
+
+		roleInfo := getRoleInfo(ctx, *resp.JSON200)
+		printRoles(roleInfo)
 	},
 }
 
@@ -241,12 +233,12 @@ var rbacResourceGroupCreateCmd = &cobra.Command{
 
 		resp, err := c.PostRbacResourceGroupWithResponse(ctx, body)
 
-		successMsg := fmt.Sprintf("Resource group %s created", TextHighlight.Render(resourceGroup))
+		successMsg := fmt.Sprintf(
+			"Resource group %s created",
+			TextHighlight.Render(resourceGroup),
+		)
 
-		ok := handleResponse(resp, err, successMsg)
-		if !ok {
-			os.Exit(1)
-		}
+		handleResponse(resp, err, successMsg)
 	},
 }
 
@@ -267,12 +259,12 @@ var rbacResourceGroupDeleteCmd = &cobra.Command{
 
 		resp, err := c.DeleteRbacResourceGroupWithResponse(ctx, body)
 
-		successMsg := fmt.Sprintf("Resource group %s deleted", TextHighlight.Render(resourceGroup))
+		successMsg := fmt.Sprintf(
+			"Resource group %s deleted",
+			TextHighlight.Render(resourceGroup),
+		)
 
-		ok := handleResponse(resp, err, successMsg)
-		if !ok {
-			os.Exit(1)
-		}
+		handleResponse(resp, err, successMsg)
 	},
 }
 
@@ -287,13 +279,10 @@ var rbacResourceGroupListCmd = &cobra.Command{
 
 		resp, err := c.GetRbacListResourceGroupsWithResponse(ctx)
 
-		ok := handleResponse(resp, err, "")
-		if !ok {
-			os.Exit(1)
-		} else {
-			rgInfo := getResourceGroupInfo(ctx, *resp.JSON200)
-			printResourceGroups(rgInfo)
-		}
+		handleResponse(resp, err, "")
+
+		rgInfo := getResourceGroupInfo(ctx, *resp.JSON200)
+		printResourceGroups(rgInfo)
 	},
 }
 
@@ -314,12 +303,9 @@ var rbacResourceGroupGetCmd = &cobra.Command{
 
 		resp, err := c.GetRbacResourceGroupWithResponse(ctx, params)
 
-		ok := handleResponse(resp, err, "")
-		if !ok {
-			os.Exit(1)
-		} else {
-			printStringTable(*resp.JSON200, "ENDPOINT")
-		}
+		handleResponse(resp, err, "")
+
+		printStringTable(*resp.JSON200, "ENDPOINT")
 	},
 }
 
@@ -349,12 +335,13 @@ var rbacEndpointAssignCmd = &cobra.Command{
 
 		resp, err := c.PostRbacEndpointWithResponse(ctx, body)
 
-		successMsg := fmt.Sprintf("Endpoint %s assigned to resource group %s", TextHighlight.Render(endpoint), TextHighlight.Render(resourceGroup))
+		successMsg := fmt.Sprintf(
+			"Endpoint %s assigned to resource group %s",
+			TextHighlight.Render(endpoint),
+			TextHighlight.Render(resourceGroup),
+		)
 
-		ok := handleResponse(resp, err, successMsg)
-		if !ok {
-			os.Exit(1)
-		}
+		handleResponse(resp, err, successMsg)
 	},
 }
 
@@ -377,12 +364,13 @@ var rbacEndpointRemoveCmd = &cobra.Command{
 
 		resp, err := c.DeleteRbacEndpointWithResponse(ctx, body)
 
-		successMsg := fmt.Sprintf("Endpoint %s removed from resource group %s", TextHighlight.Render(endpoint), TextHighlight.Render(resourceGroup))
+		successMsg := fmt.Sprintf(
+			"Endpoint %s removed from resource group %s",
+			TextHighlight.Render(endpoint),
+			TextHighlight.Render(resourceGroup),
+		)
 
-		ok := handleResponse(resp, err, successMsg)
-		if !ok {
-			os.Exit(1)
-		}
+		handleResponse(resp, err, successMsg)
 	},
 }
 
@@ -403,13 +391,10 @@ var rbacEndpointGetCmd = &cobra.Command{
 
 		resp, err := c.GetRbacEndpointWithResponse(ctx, params)
 
-		ok := handleResponse(resp, err, "")
-		if !ok {
-			os.Exit(1)
-		} else {
-			rgInfo := getResourceGroupInfo(ctx, *resp.JSON200)
-			printResourceGroups(rgInfo)
-		}
+		handleResponse(resp, err, "")
+
+		rgInfo := getResourceGroupInfo(ctx, *resp.JSON200)
+		printResourceGroups(rgInfo)
 	},
 }
 
@@ -441,12 +426,14 @@ var rbacPolicyCreateCmd = &cobra.Command{
 
 		resp, err := c.PostRbacPolicyWithResponse(ctx, body)
 
-		successMsg := fmt.Sprintf("Policy created: role %s has %s permission on resource group %s", TextHighlight.Render(role), TextHighlight.Render(permission), TextHighlight.Render(resourceGroup))
+		successMsg := fmt.Sprintf(
+			"Policy created: role %s has %s permission on resource group %s",
+			TextHighlight.Render(role),
+			TextHighlight.Render(permission),
+			TextHighlight.Render(resourceGroup),
+		)
 
-		ok := handleResponse(resp, err, successMsg)
-		if !ok {
-			os.Exit(1)
-		}
+		handleResponse(resp, err, successMsg)
 	},
 }
 
@@ -471,12 +458,14 @@ var rbacPolicyDeleteCmd = &cobra.Command{
 
 		resp, err := c.DeleteRbacPolicyWithResponse(ctx, body)
 
-		successMsg := fmt.Sprintf("Policy deleted: role %s no longer has %s permission on resource group %s", TextHighlight.Render(role), TextHighlight.Render(permission), TextHighlight.Render(resourceGroup))
+		successMsg := fmt.Sprintf(
+			"Policy deleted: role %s no longer has %s permission on resource group %s",
+			TextHighlight.Render(role),
+			TextHighlight.Render(permission),
+			TextHighlight.Render(resourceGroup),
+		)
 
-		ok := handleResponse(resp, err, successMsg)
-		if !ok {
-			os.Exit(1)
-		}
+		handleResponse(resp, err, successMsg)
 	},
 }
 
@@ -491,12 +480,9 @@ var rbacPolicyListCmd = &cobra.Command{
 
 		resp, err := c.GetRbacPolicyWithResponse(ctx)
 
-		ok := handleResponse(resp, err, "")
-		if !ok {
-			os.Exit(1)
-		} else {
-			printPolicies(*resp.JSON200)
-		}
+		handleResponse(resp, err, "")
+
+		printPolicies(*resp.JSON200)
 	},
 }
 

@@ -23,7 +23,7 @@ var configCmd = &cobra.Command{
 	Long:  `Display the current configuration loaded from files, environment variables, and flags.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		p := tea.NewProgram(newModel())
-		if err := p.Start(); err != nil {
+		if _, err := p.Run(); err != nil {
 			log.Fatal().Err(err).Msg("Failed to start config command")
 		}
 	},
