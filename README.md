@@ -5,13 +5,13 @@
 To install the latest version of Enclave CLI, run:
 
 ```bash
-sh <(curl -L https://raw.githubusercontent.com/YOUR_ORG/YOUR_REPO/main/install.sh)
+sh <(curl -L https://raw.githubusercontent.com/EnclaveRunner/cli/main/install.sh)
 ```
 
 Or with wget:
 
 ```bash
-sh <(wget -qO- https://raw.githubusercontent.com/YOUR_ORG/YOUR_REPO/main/install.sh)
+sh <(wget -qO- https://raw.githubusercontent.com/EnclaveRunner/cli/main/install.sh)
 ```
 
 ## Custom Installation Directory
@@ -19,7 +19,7 @@ sh <(wget -qO- https://raw.githubusercontent.com/YOUR_ORG/YOUR_REPO/main/install
 By default, the CLI is installed to `~/.local/bin/encl`. To install to a different directory:
 
 ```bash
-INSTALL_DIR="/usr/local/bin" sh <(curl -L https://raw.githubusercontent.com/YOUR_ORG/YOUR_REPO/main/install.sh)
+INSTALL_DIR="/usr/local/bin" sh <(curl -L https://raw.githubusercontent.com/EnclaveRunner/cli/main/install.sh)
 ```
 
 Make sure the installation directory is in your `PATH`.
@@ -28,7 +28,7 @@ Make sure the installation directory is in your `PATH`.
 
 ### 1. Download the Binary
 
-Go to the [releases page](https://github.com/YOUR_ORG/YOUR_REPO/releases) and download the appropriate binary for your system:
+Go to the [releases page](https://github.com/EnclaveRunner/cli/releases) and download the appropriate binary for your system:
 
 - **Linux AMD64**: `enclave-cli-linux-amd64`
 - **Linux ARM64**: `enclave-cli-linux-arm64`
