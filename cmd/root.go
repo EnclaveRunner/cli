@@ -54,7 +54,7 @@ func init() {
 
 	// Persistent flags (available to all subcommands)
 	rootCmd.PersistentFlags().
-		StringVar(&cfgFile, "config", "", "config file (default searches ./cli.yaml, $HOME/.enclave/cli.yaml, /etc/enclave/cli.yaml)")
+		StringVar(&cfgFile, "config", "", "config file (default searches ./cli.yml, $HOME/.enclave/cli.yml, /etc/enclave/cli.yml)")
 	rootCmd.PersistentFlags().String("api-url", "", "API server URL")
 	rootCmd.PersistentFlags().
 		String("auth-username", "", "Authentication username")

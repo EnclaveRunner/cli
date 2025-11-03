@@ -34,50 +34,52 @@ var userCreateCmd = &cobra.Command{
 			Password:    password,
 		}
 
-		resp, err := c.PostUsersUser(ctx, body)
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to create user")
+		resp, err := c.PostUsersUserWithResponse(ctx, body)
+
+		successMsg := "User created successfully"
+
+		ok := handleResponse(resp, err, successMsg)
+		if !ok {
 			os.Exit(1)
 		}
-		defer resp.Body.Close()
-
-		handleResponse(resp, "User created successfully")
 	},
 }
 
 var userDeleteCmd = &cobra.Command{
-	Use:   "delete <user-id>",
+	Use:   "delete <username>",
 	Short: "Delete a user",
-	Long:  `Delete a user by their ID.`,
+	Long:  `Delete a user by their username.`,
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		userId := args[0]
+		username := args[0]
 
 		c := getClient()
 		ctx := context.Background()
 
+		user := getUserByName(ctx, username)
+
 		body := client.DeleteUsersUserJSONRequestBody{
-			Id: userId,
+			Id: user.Id,
 		}
 
-		resp, err := c.DeleteUsersUser(ctx, body)
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to delete user")
+		resp, err := c.DeleteUsersUserWithResponse(ctx, body)
+
+		successMsg := "User deleted successfully"
+
+		ok := handleResponse(resp, err, successMsg)
+		if !ok {
 			os.Exit(1)
 		}
-		defer resp.Body.Close()
-
-		handleResponse(resp, "User deleted successfully")
 	},
 }
 
 var userUpdateCmd = &cobra.Command{
-	Use:   "update <user-id>",
+	Use:   "update <username>",
 	Short: "Update a user",
 	Long:  `Update a user's name, display name, or password.`,
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		userId := args[0]
+		username := args[0]
 		newName, _ := cmd.Flags().GetString("new-name")
 		newDisplayName, _ := cmd.Flags().GetString("new-display-name")
 		newPassword, _ := cmd.Flags().GetString("new-password")
@@ -91,8 +93,10 @@ var userUpdateCmd = &cobra.Command{
 		c := getClient()
 		ctx := context.Background()
 
+		user := getUserByName(ctx, username)
+
 		body := client.PatchUser{
-			Id: userId,
+			Id: user.Id,
 		}
 
 		if newName != "" {
@@ -105,40 +109,30 @@ var userUpdateCmd = &cobra.Command{
 			body.NewPassword = &newPassword
 		}
 
-		resp, err := c.PatchUsersUser(ctx, body)
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to update user")
+		resp, err := c.PatchUsersUserWithResponse(ctx, body)
+
+		successMsg := "User updated successfully"
+
+		ok := handleResponse(resp, err, successMsg)
+		if !ok {
 			os.Exit(1)
 		}
-		defer resp.Body.Close()
-
-		handleResponse(resp, "User updated successfully")
 	},
 }
 
 var userGetCmd = &cobra.Command{
-	Use:   "get <user-id>",
+	Use:   "get <username>",
 	Short: "Get user information",
-	Long:  `Retrieve information about a specific user by their ID.`,
+	Long:  `Retrieve information about a specific user by their username.`,
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		userId := args[0]
+		username := args[0]
 
-		c := getClient()
 		ctx := context.Background()
 
-		params := &client.GetUsersUserParams{
-			UserId: userId,
-		}
+		user := getUserByName(ctx, username)
 
-		resp, err := c.GetUsersUser(ctx, params)
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to get user")
-			os.Exit(1)
-		}
-		defer resp.Body.Close()
-
-		handleResponse(resp, "")
+		printUser(user)
 	},
 }
 
@@ -151,14 +145,19 @@ var userListCmd = &cobra.Command{
 		c := getClient()
 		ctx := context.Background()
 
-		resp, err := c.GetUsersList(ctx)
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to list users")
-			os.Exit(1)
-		}
-		defer resp.Body.Close()
+		resp, err := c.GetUsersListWithResponse(ctx)
 
-		handleResponse(resp, "")
+		ok := handleResponse(resp, err, "")
+		if !ok {
+			os.Exit(1)
+		} else {
+			// Convert []UserResponse to []*UserResponse
+			users := make([]*client.UserResponse, len(*resp.JSON200))
+			for i := range *resp.JSON200 {
+				users[i] = &(*resp.JSON200)[i]
+			}
+			printUsers(users)
+		}
 	},
 }
 
@@ -177,14 +176,14 @@ var userMeGetCmd = &cobra.Command{
 		c := getClient()
 		ctx := context.Background()
 
-		resp, err := c.GetUsersMe(ctx)
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to get current user")
-			os.Exit(1)
-		}
-		defer resp.Body.Close()
+		resp, err := c.GetUsersMeWithResponse(ctx)
 
-		handleResponse(resp, "")
+		ok := handleResponse(resp, err, "")
+		if !ok {
+			os.Exit(1)
+		} else {
+			printUser(resp.JSON200)
+		}
 	},
 }
 
@@ -219,14 +218,14 @@ var userMeUpdateCmd = &cobra.Command{
 			body.NewPassword = &newPassword
 		}
 
-		resp, err := c.PatchUsersMe(ctx, body)
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to update current user")
+		resp, err := c.PatchUsersMeWithResponse(ctx, body)
+
+		successMsg := "Current user updated successfully"
+
+		ok := handleResponse(resp, err, successMsg)
+		if !ok {
 			os.Exit(1)
 		}
-		defer resp.Body.Close()
-
-		handleResponse(resp, "Current user updated successfully")
 	},
 }
 

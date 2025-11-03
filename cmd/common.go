@@ -6,18 +6,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
+	"os"
+	"reflect"
 	"sync"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/lipgloss/list"
 	"github.com/charmbracelet/lipgloss/table"
 	"github.com/rs/zerolog/log"
-)
-
-const (
-	colorPrimaryGreen = "#6f7f37"
 )
 
 func getClient() *client.ClientWithResponses {
@@ -46,79 +42,373 @@ func getClient() *client.ClientWithResponses {
 	return c
 }
 
-func handleResponse(resp *http.Response, successMsg string) bool {
+// ResponseWithBody is an interface that matches all generated API response types
+// All response types have StatusCode() method and Body field
+type ResponseWithBody interface {
+	StatusCode() int
+}
+
+// handleResponse safely handles API responses, checking for nil before accessing fields
+// This prevents segfaults when an error occurs and resp is nil
+// It uses reflection to safely access the Body field which exists on all response types
+func handleResponse(resp ResponseWithBody, err error, successMsg string) bool {
+	if err != nil {
+		log.Error().Err(err).Msg("Request failed")
+
+		return false
+	}
+
+	if resp == nil {
+		log.Error().Msg("Request failed: no response received")
+
+		return false
+	}
+
+	// Extract body using reflection to safely access the Body field
+	// All generated response types have: Body []byte field
+	var body []byte
+
+	// Use reflection to access the Body field - all response types have this field
+	respValue := reflect.ValueOf(resp)
+	if respValue.Kind() == reflect.Pointer {
+		respValue = respValue.Elem()
+	}
+
+	// Get the Body field
+	bodyField := respValue.FieldByName("Body")
+	if bodyField.IsValid() && bodyField.Kind() == reflect.Slice {
+		body = bodyField.Bytes()
+	} else {
+		// Fallback: no body available
+		body = []byte{}
+	}
+
 	switch {
-	case resp.StatusCode >= 200 && resp.StatusCode < 300:
+	case resp.StatusCode() >= 200 && resp.StatusCode() < 300:
 		if successMsg != "" {
-			log.Info().Msg(successMsg)
+			log.Info().Msg(TextPrimary.Render(successMsg))
 		}
 
 		return true
 
-	case resp.StatusCode == http.StatusUnauthorized:
+	case resp.StatusCode() == http.StatusUnauthorized:
 		log.Error().Msg("Unauthorized: Invalid credentials")
 
 		return false
 
-	case resp.StatusCode == http.StatusForbidden:
+	case resp.StatusCode() == http.StatusForbidden:
 		log.Error().
 			Msg("Forbidden: You do not have permission to perform this action")
 
 		return false
 
-	case resp.StatusCode == http.StatusNotFound:
+	case resp.StatusCode() == http.StatusNotFound:
 		log.Error().Msg("Not Found: The requested resource does not exist")
 
 		return false
 
-	case resp.StatusCode == http.StatusInternalServerError:
+	case resp.StatusCode() == http.StatusInternalServerError:
 		log.Error().
 			Msg("Internal Server Error: An error occurred on the server. Look at the server logs for more details.")
 
 		return false
 
 	default:
-		log.Error().Msgf("Request failed with status code %d", resp.StatusCode)
-		if resp.Body != nil {
-			defer resp.Body.Close()
-			bodyBytes, err := io.ReadAll(resp.Body)
-			if err != nil {
-				log.Error().Err(err).Msg("Failed to read response body")
-
-				return false
-			}
+		log.Error().Msgf("Request failed with status code %d", resp.StatusCode())
+		if len(body) > 0 {
 
 			// Check if body is json with error field
 			var dest client.ErrGeneric
-			if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-				log.Error().Msgf("Error: %s", string(bodyBytes))
-
-				return false
+			if err := json.Unmarshal(body, &dest); err != nil {
+				log.Error().Msgf("Error: %s", string(body))
+			} else {
+				log.Error().Msgf("Error: %s", dest.Error)
 			}
-
-			log.Error().Msgf("Error: %s", dest.Error)
 		}
 
 		return false
 	}
 }
 
-func printSlice(arr []string) {
-	conv := make([]any, len(arr))
+func printStringTable(arr []string, header string) {
+	data := make([][]string, len(arr))
 	for i, v := range arr {
-		conv[i] = v
+		data[i] = []string{v}
 	}
 
-	l := list.New(conv...).Enumerator(list.Arabic).
-		ItemStyle(lipgloss.NewStyle().Bold(true).PaddingLeft(1)).
-		EnumeratorStyle(lipgloss.NewStyle().Foreground(lipgloss.Color(colorPrimaryGreen)))
+	headers := []string{header}
+	printTable(data, headers)
+}
 
-	fmt.Println(l)
+// RoleInfo contains role name with additional metadata
+type RoleInfo struct {
+	Role        string
+	UserCount   int
+	PolicyCount int
+}
+
+func printRoles(roles []RoleInfo) {
+	data := make([][]string, len(roles))
+	headers := []string{"ROLE", "USERS", "POLICIES"}
+
+	for i, role := range roles {
+		data[i] = []string{
+			role.Role,
+			fmt.Sprintf("%d", role.UserCount),
+			fmt.Sprintf("%d", role.PolicyCount),
+		}
+	}
+
+	printTable(data, headers)
+}
+
+// ResourceGroupInfo contains resource group name with additional metadata
+type ResourceGroupInfo struct {
+	ResourceGroup string
+	EndpointCount int
+	PolicyCount   int
+}
+
+func printResourceGroups(groups []ResourceGroupInfo) {
+	data := make([][]string, len(groups))
+	headers := []string{"RESOURCE GROUP", "ENDPOINTS", "POLICIES"}
+
+	for i, group := range groups {
+		data[i] = []string{
+			group.ResourceGroup,
+			fmt.Sprintf("%d", group.EndpointCount),
+			fmt.Sprintf("%d", group.PolicyCount),
+		}
+	}
+
+	printTable(data, headers)
+}
+
+// getRoleInfo fetches role metadata (user count and policy count)
+func getRoleInfo(ctx context.Context, roles []string) []RoleInfo {
+	c := getClient()
+
+	// Get all policies to count per role
+	policiesResp, err := c.GetRbacPolicyWithResponse(ctx)
+	if err != nil || policiesResp.JSON200 == nil {
+		// If we can't get policies, return roles with zero counts
+		result := make([]RoleInfo, len(roles))
+		for i, role := range roles {
+			result[i] = RoleInfo{Role: role, UserCount: 0, PolicyCount: 0}
+		}
+		return result
+	}
+
+	policies := *policiesResp.JSON200
+
+	// Count policies and users per role
+	roleCounts := make(map[string]*RoleInfo)
+	for _, role := range roles {
+		roleCounts[role] = &RoleInfo{Role: role, UserCount: 0, PolicyCount: 0}
+	}
+
+	// Count policies
+	for _, policy := range policies {
+		if info, exists := roleCounts[policy.Role]; exists {
+			info.PolicyCount++
+		}
+	}
+
+	// Count users per role concurrently
+	type roleUserCount struct {
+		role  string
+		count int
+	}
+
+	resultChan := make(chan roleUserCount, len(roles))
+	var wg sync.WaitGroup
+
+	for _, role := range roles {
+		wg.Add(1)
+		go func(r string) {
+			defer wg.Done()
+			params := &client.GetRbacRoleParams{Role: r}
+			resp, err := c.GetRbacRoleWithResponse(ctx, params)
+			if err == nil && resp.JSON200 != nil {
+				resultChan <- roleUserCount{role: r, count: len(*resp.JSON200)}
+			} else {
+				resultChan <- roleUserCount{role: r, count: 0}
+			}
+		}(role)
+	}
+
+	go func() {
+		wg.Wait()
+		close(resultChan)
+	}()
+
+	for result := range resultChan {
+		if info, exists := roleCounts[result.role]; exists {
+			info.UserCount = result.count
+		}
+	}
+
+	// Convert map to slice in original order
+	result := make([]RoleInfo, len(roles))
+	for i, role := range roles {
+		result[i] = *roleCounts[role]
+	}
+
+	return result
+}
+
+// getResourceGroupInfo fetches resource group metadata (endpoint count and policy count)
+func getResourceGroupInfo(ctx context.Context, resourceGroups []string) []ResourceGroupInfo {
+	c := getClient()
+
+	// Get all policies to count per resource group
+	policiesResp, err := c.GetRbacPolicyWithResponse(ctx)
+	if err != nil || policiesResp.JSON200 == nil {
+		// If we can't get policies, return groups with zero counts
+		result := make([]ResourceGroupInfo, len(resourceGroups))
+		for i, rg := range resourceGroups {
+			result[i] = ResourceGroupInfo{ResourceGroup: rg, EndpointCount: 0, PolicyCount: 0}
+		}
+		return result
+	}
+
+	policies := *policiesResp.JSON200
+
+	// Count policies per resource group
+	rgCounts := make(map[string]*ResourceGroupInfo)
+	for _, rg := range resourceGroups {
+		rgCounts[rg] = &ResourceGroupInfo{ResourceGroup: rg, EndpointCount: 0, PolicyCount: 0}
+	}
+
+	for _, policy := range policies {
+		if info, exists := rgCounts[policy.ResourceGroup]; exists {
+			info.PolicyCount++
+		}
+	}
+
+	// Count endpoints per resource group concurrently
+	type rgEndpointCount struct {
+		resourceGroup string
+		count         int
+	}
+
+	resultChan := make(chan rgEndpointCount, len(resourceGroups))
+	var wg sync.WaitGroup
+
+	for _, rg := range resourceGroups {
+		wg.Add(1)
+		go func(r string) {
+			defer wg.Done()
+			params := &client.GetRbacResourceGroupParams{ResourceGroup: r}
+			resp, err := c.GetRbacResourceGroupWithResponse(ctx, params)
+			if err == nil && resp.JSON200 != nil {
+				resultChan <- rgEndpointCount{resourceGroup: r, count: len(*resp.JSON200)}
+			} else {
+				resultChan <- rgEndpointCount{resourceGroup: r, count: 0}
+			}
+		}(rg)
+	}
+
+	go func() {
+		wg.Wait()
+		close(resultChan)
+	}()
+
+	for result := range resultChan {
+		if info, exists := rgCounts[result.resourceGroup]; exists {
+			info.EndpointCount = result.count
+		}
+	}
+
+	// Convert map to slice in original order
+	result := make([]ResourceGroupInfo, len(resourceGroups))
+	for i, rg := range resourceGroups {
+		result[i] = *rgCounts[rg]
+	}
+
+	return result
+}
+
+// EndpointInfo contains endpoint name with resource group assignment
+type EndpointInfo struct {
+	Endpoint      string
+	ResourceGroup string
+}
+
+func printEndpoints(endpoints []EndpointInfo) {
+	data := make([][]string, len(endpoints))
+	headers := []string{"ENDPOINT", "RESOURCE GROUP"}
+
+	for i, ep := range endpoints {
+		data[i] = []string{
+			ep.Endpoint,
+			ep.ResourceGroup,
+		}
+	}
+
+	printTable(data, headers)
+}
+
+// getEndpointInfo fetches endpoint metadata (resource group assignment)
+func getEndpointInfo(ctx context.Context, endpoints []string) []EndpointInfo {
+	c := getClient()
+
+	type endpointRG struct {
+		endpoint      string
+		resourceGroup string
+	}
+
+	resultChan := make(chan endpointRG, len(endpoints))
+	var wg sync.WaitGroup
+
+	for _, ep := range endpoints {
+		wg.Add(1)
+		go func(e string) {
+			defer wg.Done()
+			params := &client.GetRbacEndpointParams{Endpoint: e}
+			resp, err := c.GetRbacEndpointWithResponse(ctx, params)
+			if err == nil && resp.JSON200 != nil && len(*resp.JSON200) > 0 {
+				resultChan <- endpointRG{endpoint: e, resourceGroup: (*resp.JSON200)[0]}
+			} else {
+				resultChan <- endpointRG{endpoint: e, resourceGroup: "-"}
+			}
+		}(ep)
+	}
+
+	go func() {
+		wg.Wait()
+		close(resultChan)
+	}()
+
+	// Collect results
+	epMap := make(map[string]string)
+	for result := range resultChan {
+		epMap[result.endpoint] = result.resourceGroup
+	}
+
+	// Convert to slice in original order
+	result := make([]EndpointInfo, len(endpoints))
+	for i, ep := range endpoints {
+		result[i] = EndpointInfo{
+			Endpoint:      ep,
+			ResourceGroup: epMap[ep],
+		}
+	}
+
+	return result
+}
+
+func printUser(user *client.UserResponse) {
+	data := [][]string{
+		{user.Id, user.Name, user.DisplayName},
+	}
+	headers := []string{"ID", "USERNAME", "DISPLAY NAME"}
+	printTable(data, headers)
 }
 
 func printUsers(users []*client.UserResponse) {
 	data := make([][]string, len(users))
-	headers := []string{"ID", "Username", "Display Name"}
+	headers := []string{"ID", "USERNAME", "DISPLAY NAME"}
 
 	for i, user := range users {
 		data[i] = []string{
@@ -133,17 +423,23 @@ func printUsers(users []*client.UserResponse) {
 
 func printTable(data [][]string, headers []string) {
 	baseStyle := lipgloss.NewStyle().Padding(0, 1)
-	headerStyle := baseStyle.Bold(true).Foreground(lipgloss.Color(colorPrimaryGreen))
+	headerStyle := baseStyle.Bold(true)
+	rowStyle := baseStyle.Foreground(lipgloss.Color(ColorPrimary))
 
 	t := table.New().
-		Border(lipgloss.RoundedBorder()).
-		BorderStyle(lipgloss.NewStyle().Foreground(lipgloss.Color("244"))).
+		BorderBottom(false).
+		BorderColumn(false).
+		BorderHeader(false).
+		BorderLeft(false).
+		BorderRight(false).
+		BorderRow(false).
+		BorderTop(false).
 		StyleFunc(func(row, col int) lipgloss.Style {
-			switch {
-			case row == table.HeaderRow:
+			switch row {
+			case table.HeaderRow:
 				return headerStyle
 			default:
-				return baseStyle
+				return rowStyle
 			}
 		})
 
@@ -152,24 +448,34 @@ func printTable(data [][]string, headers []string) {
 	fmt.Println(t)
 }
 
-func getUserById(ctx context.Context, userId string) (*client.UserResponse, error) {
+func printPolicies(policies []client.RBACPolicy) {
+	data := make([][]string, len(policies))
+	headers := []string{"ROLE", "RESOURCE GROUP", "PERMISSION"}
+
+	for i, policy := range policies {
+		data[i] = []string{
+			policy.Role,
+			policy.ResourceGroup,
+			string(policy.Permission),
+		}
+	}
+
+	printTable(data, headers)
+}
+
+func getUserById(ctx context.Context, userId string) *client.UserResponse {
 	c := getClient()
 	params := &client.GetUsersUserParams{
-		UserId: userId,
+		UserId: &userId,
 	}
 
 	resp, err := c.GetUsersUserWithResponse(ctx, params)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to get user")
 
-		return nil, err
+	if !handleResponse(resp, err, "") {
+		os.Exit(1)
 	}
 
-	if resp.StatusCode() != http.StatusOK {
-		return nil, fmt.Errorf("failed to get user: status %d", resp.StatusCode())
-	}
-
-	return resp.JSON200, nil
+	return resp.JSON200
 }
 
 // getUsersByIds fetches multiple users concurrently by their IDs
@@ -180,7 +486,6 @@ func getUsersByIds(ctx context.Context, userIds []string) ([]*client.UserRespons
 
 	type userResult struct {
 		user  *client.UserResponse
-		err   error
 		index int
 	}
 
@@ -192,8 +497,8 @@ func getUsersByIds(ctx context.Context, userIds []string) ([]*client.UserRespons
 		wg.Add(1)
 		go func(id string, idx int) {
 			defer wg.Done()
-			user, err := getUserById(ctx, id)
-			results <- userResult{user: user, err: err, index: idx}
+			user := getUserById(ctx, id)
+			results <- userResult{user: user, index: idx}
 		}(userId, i)
 	}
 
@@ -208,11 +513,6 @@ func getUsersByIds(ctx context.Context, userIds []string) ([]*client.UserRespons
 	var errs []error
 
 	for result := range results {
-		if result.err != nil {
-			errs = append(errs, result.err)
-
-			continue
-		}
 		users[result.index] = result.user
 	}
 
@@ -226,4 +526,19 @@ func getUsersByIds(ctx context.Context, userIds []string) ([]*client.UserRespons
 	}
 
 	return users, nil
+}
+
+func getUserByName(ctx context.Context, username string) *client.UserResponse {
+	c := getClient()
+	params := &client.GetUsersUserParams{
+		Name: &username,
+	}
+
+	resp, err := c.GetUsersUserWithResponse(ctx, params)
+
+	if !handleResponse(resp, err, "") {
+		os.Exit(1)
+	}
+
+	return resp.JSON200
 }

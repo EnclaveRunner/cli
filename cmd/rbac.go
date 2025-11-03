@@ -3,9 +3,9 @@ package cmd
 import (
 	"cli/client"
 	"context"
+	"fmt"
 	"os"
 
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -38,12 +38,10 @@ var rbacRoleCreateCmd = &cobra.Command{
 		}
 
 		resp, err := c.PostRbacRoleWithResponse(ctx, body)
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to create role")
-			os.Exit(1)
-		}
 
-		ok := handleResponse(resp.HTTPResponse, "Role created successfully")
+		successMsg := fmt.Sprintf("Role '%s' created", TextHighlight.Render(role))
+
+		ok := handleResponse(resp, err, successMsg)
 		if !ok {
 			os.Exit(1)
 		}
@@ -66,12 +64,10 @@ var rbacRoleDeleteCmd = &cobra.Command{
 		}
 
 		resp, err := c.DeleteRbacRoleWithResponse(ctx, body)
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to delete role")
-			os.Exit(1)
-		}
 
-		ok := handleResponse(resp.HTTPResponse, "Role deleted successfully")
+		successMsg := fmt.Sprintf("Role '%s deleted", TextHighlight.Render(role))
+
+		ok := handleResponse(resp, err, successMsg)
 		if !ok {
 			os.Exit(1)
 		}
@@ -88,16 +84,13 @@ var rbacRoleListCmd = &cobra.Command{
 		ctx := context.Background()
 
 		resp, err := c.GetRbacListRolesWithResponse(ctx)
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to list roles")
-			os.Exit(1)
-		}
 
-		ok := handleResponse(resp.HTTPResponse, "")
+		ok := handleResponse(resp, err, "")
 		if !ok {
 			os.Exit(1)
 		} else {
-			printSlice(*resp.JSON200)
+			roleInfo := getRoleInfo(ctx, *resp.JSON200)
+			printRoles(roleInfo)
 		}
 	},
 }
@@ -118,18 +111,14 @@ var rbacRoleGetCmd = &cobra.Command{
 		}
 
 		resp, err := c.GetRbacRoleWithResponse(ctx, params)
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to get role users")
-			os.Exit(1)
-		}
 
-		ok := handleResponse(resp.HTTPResponse, "")
+		ok := handleResponse(resp, err, "")
 		if !ok {
 			os.Exit(1)
 		}
 
 		users, err := getUsersByIds(ctx, *resp.JSON200)
-		
+
 		printUsers(users)
 	},
 }
@@ -142,84 +131,89 @@ var rbacUserCmd = &cobra.Command{
 }
 
 var rbacUserAssignCmd = &cobra.Command{
-	Use:   "assign <user-id> <role>",
+	Use:   "assign <username> <role>",
 	Short: "Assign a role to a user",
 	Long:  `Assign a role to a specific user.`,
 	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		userId := args[0]
+		username := args[0]
 		role := args[1]
 
 		c := getClient()
 		ctx := context.Background()
 
-		body := client.PostRbacUserJSONRequestBody{
-			UserId: userId,
-			Role:   role,
-		}
+		user := getUserByName(ctx, username)
 
-		resp, err := c.PostRbacUser(ctx, body)
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to assign role to user")
+		assignReq, err := c.PostRbacUserWithResponse(ctx, client.PostRbacUserJSONRequestBody{
+			UserId: user.Id,
+			Role:   role,
+		})
+
+		successMsg := fmt.Sprintf("%s (%s) has role %s now", TextHighlight.Render(user.DisplayName), TextHighlight.Render(user.Id), TextHighlight.Render(role))
+
+		ok := handleResponse(assignReq, err, successMsg)
+		if !ok {
 			os.Exit(1)
 		}
-		defer resp.Body.Close()
-
-		handleResponse(resp, "Role assigned to user successfully")
 	},
 }
 
 var rbacUserRemoveCmd = &cobra.Command{
-	Use:   "remove <user-id> <role>",
+	Use:   "remove <username> <role>",
 	Short: "Remove a role from a user",
 	Long:  `Remove a role from a specific user.`,
 	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		userId := args[0]
+		username := args[0]
 		role := args[1]
 
 		c := getClient()
 		ctx := context.Background()
 
+		user := getUserByName(ctx, username)
+
 		body := client.DeleteRbacUserJSONRequestBody{
-			UserId: userId,
+			UserId: user.Id,
 			Role:   role,
 		}
 
-		resp, err := c.DeleteRbacUser(ctx, body)
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to remove role from user")
+		resp, err := c.DeleteRbacUserWithResponse(ctx, body)
+
+		successMsg := fmt.Sprintf("Role %s removed from %s (%s)", TextHighlight.Render(role), TextHighlight.Render(user.DisplayName), TextHighlight.Render(user.Id))
+
+		ok := handleResponse(resp, err, successMsg)
+		if !ok {
 			os.Exit(1)
 		}
-		defer resp.Body.Close()
-
-		handleResponse(resp, "Role removed from user successfully")
 	},
 }
 
 var rbacUserGetCmd = &cobra.Command{
-	Use:   "get <user-id>",
+	Use:   "get <username>",
 	Short: "Get roles assigned to a user",
 	Long:  `Retrieve a list of roles assigned to a specific user.`,
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		userId := args[0]
+		username := args[0]
 
 		c := getClient()
 		ctx := context.Background()
 
+		user := getUserByName(ctx, username)
+
 		params := &client.GetRbacUserParams{
-			UserId: userId,
+			UserId: user.Id,
 		}
 
-		resp, err := c.GetRbacUser(ctx, params)
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to get user roles")
+		resp, err := c.GetRbacUserWithResponse(ctx, params)
+
+		ok := handleResponse(resp, err, "")
+		if !ok {
 			os.Exit(1)
+		} else {
+			roleInfo := getRoleInfo(ctx, *resp.JSON200)
+			printRoles(roleInfo)
 		}
-		defer resp.Body.Close()
-
-		handleResponse(resp, "")
 	},
 }
 
@@ -245,14 +239,14 @@ var rbacResourceGroupCreateCmd = &cobra.Command{
 			ResourceGroup: resourceGroup,
 		}
 
-		resp, err := c.PostRbacResourceGroup(ctx, body)
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to create resource group")
+		resp, err := c.PostRbacResourceGroupWithResponse(ctx, body)
+
+		successMsg := fmt.Sprintf("Resource group %s created", TextHighlight.Render(resourceGroup))
+
+		ok := handleResponse(resp, err, successMsg)
+		if !ok {
 			os.Exit(1)
 		}
-		defer resp.Body.Close()
-
-		handleResponse(resp, "Resource group created successfully")
 	},
 }
 
@@ -271,14 +265,14 @@ var rbacResourceGroupDeleteCmd = &cobra.Command{
 			ResourceGroup: resourceGroup,
 		}
 
-		resp, err := c.DeleteRbacResourceGroup(ctx, body)
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to delete resource group")
+		resp, err := c.DeleteRbacResourceGroupWithResponse(ctx, body)
+
+		successMsg := fmt.Sprintf("Resource group %s deleted", TextHighlight.Render(resourceGroup))
+
+		ok := handleResponse(resp, err, successMsg)
+		if !ok {
 			os.Exit(1)
 		}
-		defer resp.Body.Close()
-
-		handleResponse(resp, "Resource group deleted successfully")
 	},
 }
 
@@ -291,14 +285,15 @@ var rbacResourceGroupListCmd = &cobra.Command{
 		c := getClient()
 		ctx := context.Background()
 
-		resp, err := c.GetRbacListResourceGroups(ctx)
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to list resource groups")
-			os.Exit(1)
-		}
-		defer resp.Body.Close()
+		resp, err := c.GetRbacListResourceGroupsWithResponse(ctx)
 
-		handleResponse(resp, "")
+		ok := handleResponse(resp, err, "")
+		if !ok {
+			os.Exit(1)
+		} else {
+			rgInfo := getResourceGroupInfo(ctx, *resp.JSON200)
+			printResourceGroups(rgInfo)
+		}
 	},
 }
 
@@ -317,14 +312,14 @@ var rbacResourceGroupGetCmd = &cobra.Command{
 			ResourceGroup: resourceGroup,
 		}
 
-		resp, err := c.GetRbacResourceGroup(ctx, params)
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to get resource group endpoints")
-			os.Exit(1)
-		}
-		defer resp.Body.Close()
+		resp, err := c.GetRbacResourceGroupWithResponse(ctx, params)
 
-		handleResponse(resp, "")
+		ok := handleResponse(resp, err, "")
+		if !ok {
+			os.Exit(1)
+		} else {
+			printStringTable(*resp.JSON200, "ENDPOINT")
+		}
 	},
 }
 
@@ -352,14 +347,14 @@ var rbacEndpointAssignCmd = &cobra.Command{
 			ResourceGroup: resourceGroup,
 		}
 
-		resp, err := c.PostRbacEndpoint(ctx, body)
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to assign endpoint to resource group")
+		resp, err := c.PostRbacEndpointWithResponse(ctx, body)
+
+		successMsg := fmt.Sprintf("Endpoint %s assigned to resource group %s", TextHighlight.Render(endpoint), TextHighlight.Render(resourceGroup))
+
+		ok := handleResponse(resp, err, successMsg)
+		if !ok {
 			os.Exit(1)
 		}
-		defer resp.Body.Close()
-
-		handleResponse(resp, "Endpoint assigned to resource group successfully")
 	},
 }
 
@@ -380,14 +375,14 @@ var rbacEndpointRemoveCmd = &cobra.Command{
 			ResourceGroup: resourceGroup,
 		}
 
-		resp, err := c.DeleteRbacEndpoint(ctx, body)
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to remove endpoint from resource group")
+		resp, err := c.DeleteRbacEndpointWithResponse(ctx, body)
+
+		successMsg := fmt.Sprintf("Endpoint %s removed from resource group %s", TextHighlight.Render(endpoint), TextHighlight.Render(resourceGroup))
+
+		ok := handleResponse(resp, err, successMsg)
+		if !ok {
 			os.Exit(1)
 		}
-		defer resp.Body.Close()
-
-		handleResponse(resp, "Endpoint removed from resource group successfully")
 	},
 }
 
@@ -406,14 +401,15 @@ var rbacEndpointGetCmd = &cobra.Command{
 			Endpoint: endpoint,
 		}
 
-		resp, err := c.GetRbacEndpoint(ctx, params)
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to get endpoint resource group")
-			os.Exit(1)
-		}
-		defer resp.Body.Close()
+		resp, err := c.GetRbacEndpointWithResponse(ctx, params)
 
-		handleResponse(resp, "")
+		ok := handleResponse(resp, err, "")
+		if !ok {
+			os.Exit(1)
+		} else {
+			rgInfo := getResourceGroupInfo(ctx, *resp.JSON200)
+			printResourceGroups(rgInfo)
+		}
 	},
 }
 
@@ -443,14 +439,14 @@ var rbacPolicyCreateCmd = &cobra.Command{
 			Permission:    client.RBACPolicyPermission(permission),
 		}
 
-		resp, err := c.PostRbacPolicy(ctx, body)
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to create policy")
+		resp, err := c.PostRbacPolicyWithResponse(ctx, body)
+
+		successMsg := fmt.Sprintf("Policy created: role %s has %s permission on resource group %s", TextHighlight.Render(role), TextHighlight.Render(permission), TextHighlight.Render(resourceGroup))
+
+		ok := handleResponse(resp, err, successMsg)
+		if !ok {
 			os.Exit(1)
 		}
-		defer resp.Body.Close()
-
-		handleResponse(resp, "Policy created successfully")
 	},
 }
 
@@ -473,14 +469,14 @@ var rbacPolicyDeleteCmd = &cobra.Command{
 			Permission:    client.RBACPolicyPermission(permission),
 		}
 
-		resp, err := c.DeleteRbacPolicy(ctx, body)
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to delete policy")
+		resp, err := c.DeleteRbacPolicyWithResponse(ctx, body)
+
+		successMsg := fmt.Sprintf("Policy deleted: role %s no longer has %s permission on resource group %s", TextHighlight.Render(role), TextHighlight.Render(permission), TextHighlight.Render(resourceGroup))
+
+		ok := handleResponse(resp, err, successMsg)
+		if !ok {
 			os.Exit(1)
 		}
-		defer resp.Body.Close()
-
-		handleResponse(resp, "Policy deleted successfully")
 	},
 }
 
@@ -493,14 +489,14 @@ var rbacPolicyListCmd = &cobra.Command{
 		c := getClient()
 		ctx := context.Background()
 
-		resp, err := c.GetRbacPolicy(ctx)
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to list policies")
-			os.Exit(1)
-		}
-		defer resp.Body.Close()
+		resp, err := c.GetRbacPolicyWithResponse(ctx)
 
-		handleResponse(resp, "")
+		ok := handleResponse(resp, err, "")
+		if !ok {
+			os.Exit(1)
+		} else {
+			printPolicies(*resp.JSON200)
+		}
 	},
 }
 
