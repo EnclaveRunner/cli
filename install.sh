@@ -125,9 +125,16 @@ install_cli() {
 
     # Install binary
     log_info "Installing to ${INSTALL_DIR}/${BINARY_NAME}..."
-    mkdir -p "$INSTALL_DIR"
-    mv "$TMP_DIR/$BINARY_FILENAME" "$INSTALL_DIR/$BINARY_NAME"
-    chmod +x "$INSTALL_DIR/$BINARY_NAME"
+    if [ -w "$INSTALL_DIR" ]; then
+        mkdir -p "$INSTALL_DIR"
+        mv "$TMP_DIR/$BINARY_FILENAME" "$INSTALL_DIR/$BINARY_NAME"
+        chmod +x "$INSTALL_DIR/$BINARY_NAME"
+    else
+        log_info "No write permission to $INSTALL_DIR, using sudo for install step..."
+        sudo mkdir -p "$INSTALL_DIR"
+        sudo mv "$TMP_DIR/$BINARY_FILENAME" "$INSTALL_DIR/$BINARY_NAME"
+        sudo chmod +x "$INSTALL_DIR/$BINARY_NAME"
+    fi
 
     log_info "Installation complete!"
 
