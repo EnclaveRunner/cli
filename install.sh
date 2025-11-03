@@ -123,17 +123,25 @@ install_cli() {
     # Make binary executable
     chmod +x "$TMP_DIR/$BINARY_FILENAME"
 
-    # Install binary
+    # Install binary (robust cross-platform permission check)
     log_info "Installing to ${INSTALL_DIR}/${BINARY_NAME}..."
-    if [ -w "$INSTALL_DIR" ]; then
-        mkdir -p "$INSTALL_DIR"
-        mv "$TMP_DIR/$BINARY_FILENAME" "$INSTALL_DIR/$BINARY_NAME"
-        chmod +x "$INSTALL_DIR/$BINARY_NAME"
-    else
-        log_info "No write permission to $INSTALL_DIR, using sudo for install step..."
+
+    # Ensure install directory exists (try with and without sudo)
+    if ! mkdir -p "$INSTALL_DIR" 2>/dev/null; then
+        log_info "No permission to create $INSTALL_DIR, using sudo..."
         sudo mkdir -p "$INSTALL_DIR"
+    fi
+
+    # Test if we can write to the install directory
+    TESTFILE="$INSTALL_DIR/.encl_write_test"
+    if ! (echo test > "$TESTFILE" 2>/dev/null); then
+        log_info "No write permission to $INSTALL_DIR, using sudo for install step..."
         sudo mv "$TMP_DIR/$BINARY_FILENAME" "$INSTALL_DIR/$BINARY_NAME"
         sudo chmod +x "$INSTALL_DIR/$BINARY_NAME"
+    else
+        rm "$TESTFILE"
+        mv "$TMP_DIR/$BINARY_FILENAME" "$INSTALL_DIR/$BINARY_NAME"
+        chmod +x "$INSTALL_DIR/$BINARY_NAME"
     fi
 
     log_info "Installation complete!"
