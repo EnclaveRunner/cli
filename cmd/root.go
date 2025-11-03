@@ -35,7 +35,8 @@ to perform specific actions directly.`,
 		config.Init(v)
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		if versionFlag, err := cmd.Flags().GetBool("version"); err == nil && versionFlag {
+		if versionFlag, err := cmd.Flags().GetBool("version"); err == nil &&
+			versionFlag {
 			fmt.Println(config.Version)
 
 			return
