@@ -38,16 +38,16 @@ jobs:
             goarch: arm64
 
           # Windows builds
-          - os: windows
-            arch: amd64
-            runner: windows-latest
-            goos: windows
-            goarch: amd64
-          - os: windows
-            arch: arm64
-            runner: windows-latest
-            goos: windows
-            goarch: arm64
+          # - os: windows
+          #   arch: amd64
+          #   runner: windows-latest
+          #   goos: windows
+          #   goarch: amd64
+          # - os: windows
+          #   arch: arm64
+          #   runner: windows-latest
+          #   goos: windows
+          #   goarch: arm64
 
     steps:
       - name: Checkout code
