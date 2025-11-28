@@ -37,7 +37,6 @@ linters:
     - dupword
     - durationcheck
     - embeddedstructfieldcheck
-    - err113
     - errchkjson
     - errname
     - errorlint
@@ -80,7 +79,6 @@ linters:
     - unparam
     - usestdlibvars
     - wastedassign
-    - wrapcheck
   settings:
     gocritic:
       enable-all: true

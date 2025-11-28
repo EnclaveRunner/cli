@@ -17,6 +17,7 @@ var Version string
 
 type Config struct {
 	APIServerURL string     `mapstructure:"api_server_url"`
+	LogLevel     string     `mapstructure:"log_level"`
 	Auth         AuthConfig `mapstructure:"-"`
 }
 
@@ -56,6 +57,7 @@ func Init(v *viper.Viper) {
 
 	// Set defaults
 	v.SetDefault("api_server_url", "https://api.enclave.io")
+	v.SetDefault("log_level", "info")
 
 	// Try to read config file (only if explicitly set or if file exists)
 	configFileSet := v.ConfigFileUsed() != ""

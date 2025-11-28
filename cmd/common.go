@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"reflect"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/charmbracelet/lipgloss"
@@ -47,6 +48,14 @@ func getClient() *client.ClientWithResponses {
 // All response types have StatusCode() method and Body field
 type ResponseWithBody interface {
 	StatusCode() int
+}
+
+type GenericResponseWithBody struct {
+	Response *http.Response
+}
+
+func (r *GenericResponseWithBody) StatusCode() int {
+	return r.Response.StatusCode
 }
 
 // handleResponse safely handles API responses, checking for nil before
@@ -485,4 +494,30 @@ func getUserByName(ctx context.Context, username string) *client.UserResponse {
 	handleResponse(resp, err, "")
 
 	return resp.JSON200
+}
+
+func printArtifact(artifact *client.Artifact) {
+	fqn := fmt.Sprintf(
+		"%s/%s/%s",
+		artifact.Fqn.Source,
+		artifact.Fqn.Author,
+		artifact.Fqn.Name,
+	)
+	tags := strings.Join(artifact.Tags, "\n")
+
+	data := []string{
+		fqn,
+		artifact.VersionHash,
+		tags,
+		artifact.CreatedAt.Format("2006-01-02 15:04:05"),
+		strconv.Itoa(artifact.Pulls),
+	}
+
+	printTable([][]string{data}, []string{
+		"FQN",
+		"HASH",
+		"TAGS",
+		"CREATED",
+		"PULLS",
+	})
 }

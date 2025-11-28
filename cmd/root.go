@@ -33,6 +33,30 @@ to perform specific actions directly.`,
 		}
 
 		config.Init(v)
+
+		switch config.Cfg.LogLevel {
+		case "trace":
+			log.Logger = log.Logger.Level(zerolog.TraceLevel)
+		case "debug":
+			log.Logger = log.Logger.Level(zerolog.DebugLevel)
+		case "info":
+			log.Logger = log.Logger.Level(zerolog.InfoLevel)
+		case "warning":
+			fallthrough
+		case "warn":
+			log.Logger = log.Logger.Level(zerolog.WarnLevel)
+		case "error":
+			fallthrough
+		case "err":
+			log.Logger = log.Logger.Level(zerolog.ErrorLevel)
+		case "fatal":
+			log.Logger = log.Logger.Level(zerolog.FatalLevel)
+		default:
+			log.Logger = log.Logger.Level(zerolog.InfoLevel)
+			log.Warn().
+				Str("level", config.Cfg.LogLevel).
+				Msg("Provided log level invalid. Falling back to log level info")
+		}
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		if versionFlag, err := cmd.Flags().GetBool("version"); err == nil &&
