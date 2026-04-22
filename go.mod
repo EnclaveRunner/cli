@@ -5,7 +5,7 @@ go 1.25.8
 require (
 	charm.land/lipgloss/v2 v2.0.3
 	github.com/EnclaveRunner/sdk-go v0.1.0
-	github.com/charmbracelet/bubbles v1.0.0
+	github.com/charmbracelet/bubbles/v2 v2.1.0
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/rs/zerolog v1.35.1
 	github.com/spf13/cobra v1.10.2
