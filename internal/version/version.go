@@ -1,6 +1,7 @@
 package version
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -13,18 +14,28 @@ const RemoteVersionURL = "https://raw.githubusercontent.com/EnclaveRunner/cli/ma
 
 // fetchRemote retrieves the remote Version file contents.
 func fetchRemote() (string, error) {
-	resp, err := http.Get(RemoteVersionURL)
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodGet,
+		RemoteVersionURL,
+		http.NoBody,
+	)
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("unexpected status: %s", resp.Status)
 	}
 	b, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
 	}
+
 	return strings.TrimSpace(string(b)), nil
 }
 
@@ -32,7 +43,7 @@ func fetchRemote() (string, error) {
 func Compare(a, b string) int {
 	av := normalize(a)
 	bv := normalize(b)
-	for i := 0; i < 3; i++ {
+	for i := range av {
 		if av[i] > bv[i] {
 			return 1
 		}
@@ -40,6 +51,7 @@ func Compare(a, b string) int {
 			return -1
 		}
 	}
+
 	return 0
 }
 
@@ -52,6 +64,7 @@ func normalize(s string) [3]int {
 		n, _ := strconv.Atoi(parts[i])
 		out[i] = n
 	}
+
 	return out
 }
 
@@ -62,5 +75,6 @@ func CheckRemote(local string) (remote string, newer bool, err error) {
 		return "", false, err
 	}
 	c := Compare(local, r)
+
 	return r, c == -1, nil
 }

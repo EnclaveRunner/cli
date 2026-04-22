@@ -27,7 +27,7 @@ func newVersionCmd() *cobra.Command {
 			// Check remote version (best-effort)
 			remote, newer, err := iv.CheckRemote(local)
 			if err == nil && newer {
-				fmt.Fprintln(cmd.OutOrStdout(), "New version available:", remote)
+				_, _ = fmt.Fprintln(cmd.OutOrStdout(), "New version available:", remote)
 			}
 
 			return nil

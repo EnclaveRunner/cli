@@ -52,6 +52,7 @@ func checkVersionCmd(local string) tea.Cmd {
 		if err != nil {
 			return nil
 		}
+
 		return versionCheckedMsg{Remote: remote, Newer: newer}
 	}
 }
@@ -86,6 +87,7 @@ func (m AppModel) Update(
 		if msg.Newer {
 			m.header.updateNotice = fmt.Sprintf("⚡️ %s (latest)", msg.Remote)
 		}
+
 		return m, nil
 
 	case tea.WindowSizeMsg:
