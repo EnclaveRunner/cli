@@ -62,6 +62,7 @@ type headerPanel struct {
 	apiURL   string
 	username string
 	version  string
+	updateNotice string
 	width    int
 }
 
@@ -103,6 +104,10 @@ func (h headerPanel) View() string {
 		) + lipgloss.NewStyle().
 			Foreground(styles.ColorSlateLight).
 			Render(h.version),
+		// If an update notice is present, show it below the version line.
+		styles.MutedStyle.Render("          ") + lipgloss.NewStyle().
+			Foreground(styles.ColorPrimaryGreen).
+			Render(h.updateNotice),
 		"",
 		"",
 		"",

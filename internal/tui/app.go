@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strings"
 
+	iv "cli/internal/version"
+
 	"github.com/EnclaveRunner/sdk-go/enclave"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -36,6 +38,24 @@ type AppModel struct {
 	height int
 }
 
+// versionCheckedMsg is sent when an asynchronous remote version check
+// completes.
+type versionCheckedMsg struct {
+	Remote string
+	Newer  bool
+}
+
+// checkVersionCmd fetches the remote version asynchronously.
+func checkVersionCmd(local string) tea.Cmd {
+	return func() tea.Msg {
+		remote, newer, err := iv.CheckRemote(local)
+		if err != nil {
+			return nil
+		}
+		return versionCheckedMsg{Remote: remote, Newer: newer}
+	}
+}
+
 // New creates a new TUI app model.
 func New(c *enclave.Client, apiURL, username, version string) AppModel {
 	m := AppModel{
@@ -52,7 +72,8 @@ func New(c *enclave.Client, apiURL, username, version string) AppModel {
 
 // Init loads initial data (tasks view).
 func (m AppModel) Init() tea.Cmd {
-	return m.tasks.Load(m.client)
+	// Kick off tasks load and an async version check.
+	return tea.Batch(m.tasks.Load(m.client), checkVersionCmd(m.header.version))
 }
 
 // Update is the main event loop.
@@ -60,6 +81,12 @@ func (m AppModel) Update(
 	msg tea.Msg,
 ) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+
+	case versionCheckedMsg:
+		if msg.Newer {
+			m.header.updateNotice = fmt.Sprintf("⚡️ %s (latest)", msg.Remote)
+		}
+		return m, nil
 
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
