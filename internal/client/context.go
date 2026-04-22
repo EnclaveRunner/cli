@@ -1,9 +1,8 @@
 package client
 
 import (
-	"context"
-
 	"cli/internal/config"
+	"context"
 
 	"github.com/EnclaveRunner/sdk-go/enclave"
 )
@@ -23,7 +22,9 @@ func WithClient(ctx context.Context, c *enclave.Client) context.Context {
 // FromContext retrieves the SDK client from the context.
 // Panics if not set — callers must go through PersistentPreRunE.
 func FromContext(ctx context.Context) *enclave.Client {
-	return ctx.Value(clientKey).(*enclave.Client)
+	c, _ := ctx.Value(clientKey).(*enclave.Client)
+
+	return c
 }
 
 // WithConfig stores the config in the context.
@@ -33,5 +34,7 @@ func WithConfig(ctx context.Context, cfg *config.Config) context.Context {
 
 // ConfigFromContext retrieves the config from the context.
 func ConfigFromContext(ctx context.Context) *config.Config {
-	return ctx.Value(configKey).(*config.Config)
+	cfg, _ := ctx.Value(configKey).(*config.Config)
+
+	return cfg
 }

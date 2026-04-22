@@ -1,11 +1,10 @@
 package task
 
 import (
-	"fmt"
-	"os"
-
 	"cli/internal/client"
 	"cli/internal/output"
+	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 )
@@ -22,11 +21,16 @@ func newGetCmd() *cobra.Command {
 func runGet(cmd *cobra.Command, args []string) error {
 	c := client.FromContext(cmd.Context())
 	cfg := client.ConfigFromContext(cmd.Context())
-	printer := output.New(output.ParseFormat(cfg.Output), output.TaskColumns, os.Stdout)
+	printer := output.New(
+		output.ParseFormat(cfg.Output),
+		output.TaskColumns,
+		os.Stdout,
+	)
 
 	t, err := c.GetTask(cmd.Context(), args[0])
 	if err != nil {
 		return fmt.Errorf("get task: %w", err)
 	}
+
 	return printer.Print([]any{t})
 }

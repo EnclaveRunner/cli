@@ -16,8 +16,9 @@ func newVersionCmd() *cobra.Command {
 		Use:   "version",
 		Short: "Print the encl version",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			fmt.Fprintln(cmd.OutOrStdout(), strings.TrimSpace(versionFile))
-			return nil
+			_, err := fmt.Fprintln(cmd.OutOrStdout(), strings.TrimSpace(versionFile))
+
+			return err
 		},
 	}
 }

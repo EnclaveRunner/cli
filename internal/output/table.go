@@ -1,12 +1,11 @@
 package output
 
 import (
+	"cli/internal/styles"
 	"fmt"
 	"io"
 	"reflect"
 	"strings"
-
-	"cli/internal/styles"
 )
 
 type tablePrinter struct {
@@ -17,8 +16,9 @@ type tablePrinter struct {
 func (p *tablePrinter) Print(rows any) error {
 	items := toSlice(rows)
 	if len(items) == 0 {
-		fmt.Fprintln(p.w, styles.MutedStyle.Render("No results."))
-		return nil
+		_, err := fmt.Fprintln(p.w, styles.MutedStyle.Render("No results."))
+
+		return err
 	}
 
 	// Compute column widths: max of header length, MinWidth, and all cell values.
@@ -52,7 +52,9 @@ func (p *tablePrinter) Print(rows any) error {
 		padded := pad(col.Header, widths[i])
 		headerCells[i] = styles.HeaderStyle.Render(padded)
 	}
-	fmt.Fprintln(p.w, strings.Join(headerCells, ""))
+	if _, err := fmt.Fprintln(p.w, strings.Join(headerCells, "")); err != nil {
+		return err
+	}
 
 	// Render rows.
 	for _, row := range cells {
@@ -68,7 +70,9 @@ func (p *tablePrinter) Print(rows any) error {
 			}
 			rowCells[i] = " " + cell + strings.Repeat(" ", padding) + " "
 		}
-		fmt.Fprintln(p.w, strings.Join(rowCells, ""))
+		if _, err := fmt.Fprintln(p.w, strings.Join(rowCells, "")); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -84,6 +88,7 @@ func toSlice(v any) []any {
 	for i := range rv.Len() {
 		out[i] = rv.Index(i).Interface()
 	}
+
 	return out
 }
 
@@ -94,16 +99,19 @@ func stripAnsi(s string) string {
 	for _, r := range s {
 		if r == '\x1b' {
 			inEsc = true
+
 			continue
 		}
 		if inEsc {
 			if r == 'm' {
 				inEsc = false
 			}
+
 			continue
 		}
 		b.WriteRune(r)
 	}
+
 	return b.String()
 }
 
@@ -111,5 +119,6 @@ func pad(s string, width int) string {
 	if len(s) >= width {
 		return s
 	}
+
 	return s + strings.Repeat(" ", width-len(s))
 }

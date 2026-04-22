@@ -1,11 +1,10 @@
 package role
 
 import (
-	"fmt"
-	"os"
-
 	"cli/internal/client"
 	"cli/internal/output"
+	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 )
@@ -22,11 +21,16 @@ func newDeleteCmd() *cobra.Command {
 func runDelete(cmd *cobra.Command, args []string) error {
 	c := client.FromContext(cmd.Context())
 	cfg := client.ConfigFromContext(cmd.Context())
-	printer := output.New(output.ParseFormat(cfg.Output), output.RoleColumns, os.Stdout)
+	printer := output.New(
+		output.ParseFormat(cfg.Output),
+		output.RoleColumns,
+		os.Stdout,
+	)
 
 	r, err := c.DeleteRole(cmd.Context(), args[0])
 	if err != nil {
 		return fmt.Errorf("delete role: %w", err)
 	}
+
 	return printer.Print([]any{r})
 }

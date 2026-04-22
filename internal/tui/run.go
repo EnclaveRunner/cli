@@ -19,5 +19,6 @@ func RunWithConfig(c *enclave.Client, apiURL, username, version string) error {
 	if _, err := p.Run(); err != nil {
 		return fmt.Errorf("tui: %w", err)
 	}
+
 	return nil
 }

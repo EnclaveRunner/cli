@@ -1,14 +1,13 @@
 package views
 
 import (
+	"cli/internal/styles"
 	"context"
 	"strings"
 
-	"cli/internal/styles"
-
+	"charm.land/lipgloss/v2"
 	"github.com/EnclaveRunner/sdk-go/enclave"
 	tea "github.com/charmbracelet/bubbletea"
-	"charm.land/lipgloss/v2"
 )
 
 // PoliciesLoadedMsg carries loaded policies.
@@ -29,9 +28,12 @@ type PoliciesModel struct {
 }
 
 // Load fetches all policies.
-func (m PoliciesModel) Load(c *enclave.Client) tea.Cmd {
+func (m PoliciesModel) Load( //nolint:gocritic // hugeParam: Bubbletea requires value receiver.
+	c *enclave.Client,
+) tea.Cmd {
 	return func() tea.Msg {
 		policies, err := enclave.Collect(c.ListPolicies(context.Background()))
+
 		return PoliciesLoadedMsg{Policies: policies, Err: err}
 	}
 }
@@ -40,7 +42,9 @@ func (m PoliciesModel) Load(c *enclave.Client) tea.Cmd {
 func (m *PoliciesModel) SetSize(w, h int) { m.width = w; m.height = h }
 
 // Update handles messages.
-func (m PoliciesModel) Update(msg tea.Msg) (PoliciesModel, tea.Cmd) {
+func (m PoliciesModel) Update( //nolint:gocritic // hugeParam: Bubbletea requires value receiver.
+	msg tea.Msg,
+) (PoliciesModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case PoliciesLoadedMsg:
 		m.Loading = false
@@ -49,27 +53,28 @@ func (m PoliciesModel) Update(msg tea.Msg) (PoliciesModel, tea.Cmd) {
 		m.Cursor = 0
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "up", "k":
+		case keyUp, keyK:
 			if m.Cursor > 0 {
 				m.Cursor--
 			}
-		case "down", "j":
+		case keyDown, keyJ:
 			if m.Cursor < len(m.Policies)-1 {
 				m.Cursor++
 			}
-		case "left":
+		case keyLeft:
 			if m.colOffset > 0 {
 				m.colOffset--
 			}
-		case "right":
+		case keyRight:
 			m.colOffset++
 		}
 	}
+
 	return m, nil
 }
 
 // View renders the policies table.
-func (m PoliciesModel) View() string {
+func (m PoliciesModel) View() string { //nolint:gocritic // hugeParam: Bubbletea requires value receiver.
 	if m.Loading {
 		return styles.MutedStyle.Render("\n  Loading policies…")
 	}
@@ -119,5 +124,6 @@ func (m PoliciesModel) View() string {
 		}
 		b.WriteString(strings.Join(cells[startCol:], "") + "\n")
 	}
+
 	return b.String()
 }

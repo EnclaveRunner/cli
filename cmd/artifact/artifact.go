@@ -18,5 +18,6 @@ func NewCmd() *cobra.Command {
 		newTagCmd(),
 		newDeleteCmd(),
 	)
+
 	return cmd
 }

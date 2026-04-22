@@ -20,5 +20,6 @@ func NewCmd() *cobra.Command {
 		newDeleteCmd(),
 		me.NewCmd(),
 	)
+
 	return cmd
 }

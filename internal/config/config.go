@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -22,6 +23,7 @@ func (c *Config) OutputFormat() string {
 	if c.Output == "" {
 		return "table"
 	}
+
 	return c.Output
 }
 
@@ -63,7 +65,8 @@ func Load(flags *pflag.FlagSet) (*Config, error) {
 
 	// Ignore config file not found; all settings may come from env/flags.
 	if err := v.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+		var configFileNotFoundError viper.ConfigFileNotFoundError
+		if errors.As(err, &configFileNotFoundError) {
 			return nil, fmt.Errorf("read config: %w", err)
 		}
 	}

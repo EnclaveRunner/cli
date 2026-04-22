@@ -43,6 +43,8 @@ func New(format Format, columns []Column, w io.Writer) Printer {
 		return &jsonPrinter{w: w}
 	case FormatYAML:
 		return &yamlPrinter{w: w}
+	case FormatTable:
+		return &tablePrinter{columns: columns, w: w}
 	default:
 		return &tablePrinter{columns: columns, w: w}
 	}

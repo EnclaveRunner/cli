@@ -1,11 +1,10 @@
 package me
 
 import (
-	"fmt"
-	"os"
-
 	"cli/internal/client"
 	"cli/internal/output"
+	"fmt"
+	"os"
 
 	"github.com/EnclaveRunner/sdk-go/enclave"
 	"github.com/spf13/cobra"
@@ -19,13 +18,18 @@ func newUpdateCmd() *cobra.Command {
 	}
 	cmd.Flags().String("display-name", "", "New display name")
 	cmd.Flags().String("password", "", "New password")
+
 	return cmd
 }
 
 func runUpdate(cmd *cobra.Command, _ []string) error {
 	c := client.FromContext(cmd.Context())
 	cfg := client.ConfigFromContext(cmd.Context())
-	printer := output.New(output.ParseFormat(cfg.Output), output.UserColumns, os.Stdout)
+	printer := output.New(
+		output.ParseFormat(cfg.Output),
+		output.UserColumns,
+		os.Stdout,
+	)
 
 	var opts []enclave.UpdateUserOption
 	if v, _ := cmd.Flags().GetString("display-name"); v != "" {
@@ -39,5 +43,6 @@ func runUpdate(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return fmt.Errorf("update me: %w", err)
 	}
+
 	return printer.Print([]any{u})
 }

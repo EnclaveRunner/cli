@@ -1,11 +1,10 @@
 package task
 
 import (
-	"fmt"
-	"os"
-
 	"cli/internal/client"
 	"cli/internal/output"
+	"fmt"
+	"os"
 
 	"github.com/EnclaveRunner/sdk-go/enclave"
 	"github.com/spf13/cobra"
@@ -17,14 +16,20 @@ func newListCmd() *cobra.Command {
 		Short: "List tasks",
 		RunE:  runList,
 	}
-	cmd.Flags().String("state", "", "Filter by state (e.g. running, failed, completed)")
+	cmd.Flags().
+		String("state", "", "Filter by state (e.g. running, failed, completed)")
+
 	return cmd
 }
 
 func runList(cmd *cobra.Command, _ []string) error {
 	c := client.FromContext(cmd.Context())
 	cfg := client.ConfigFromContext(cmd.Context())
-	printer := output.New(output.ParseFormat(cfg.Output), output.TaskColumns, os.Stdout)
+	printer := output.New(
+		output.ParseFormat(cfg.Output),
+		output.TaskColumns,
+		os.Stdout,
+	)
 
 	var opts []enclave.ListTasksOption
 	if v, _ := cmd.Flags().GetString("state"); v != "" {
@@ -35,5 +40,6 @@ func runList(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return fmt.Errorf("list tasks: %w", err)
 	}
+
 	return printer.Print(tasks)
 }

@@ -61,12 +61,20 @@ var (
 func TaskStateBadge(state string) string {
 	switch state {
 	case "running", "processing":
-		return lipgloss.NewStyle().Foreground(ColorPrimaryGreen).Render(IconRunning + " " + state)
+		return lipgloss.NewStyle().
+			Foreground(ColorPrimaryGreen).
+			Render(IconRunning + " " + state)
 	case "failed", "error":
-		return lipgloss.NewStyle().Foreground(ColorWarmHighlight).Render(IconFailed + " " + state)
+		return lipgloss.NewStyle().
+			Foreground(ColorWarmHighlight).
+			Render(IconFailed + " " + state)
 	case "completed", "done":
-		return lipgloss.NewStyle().Foreground(ColorLogoTeal).Render(IconDone + " " + state)
+		return lipgloss.NewStyle().
+			Foreground(ColorLogoTeal).
+			Render(IconDone + " " + state)
 	default:
-		return lipgloss.NewStyle().Foreground(ColorSlateLight).Render(IconPending + " " + state)
+		return lipgloss.NewStyle().
+			Foreground(ColorSlateLight).
+			Render(IconPending + " " + state)
 	}
 }

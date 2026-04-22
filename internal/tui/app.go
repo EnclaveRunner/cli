@@ -1,11 +1,10 @@
 package tui
 
 import (
-	"fmt"
-	"strings"
-
 	"cli/internal/styles"
 	"cli/internal/tui/views"
+	"fmt"
+	"strings"
 
 	"github.com/EnclaveRunner/sdk-go/enclave"
 	tea "github.com/charmbracelet/bubbletea"
@@ -47,16 +46,19 @@ func New(c *enclave.Client, apiURL, username, version string) AppModel {
 	}
 	m.tabs.setView(ViewTasks)
 	m.tasks.Loading = true
+
 	return m
 }
 
 // Init loads initial data (tasks view).
-func (m AppModel) Init() tea.Cmd {
+func (m AppModel) Init() tea.Cmd { //nolint:gocritic // hugeParam: Bubbletea requires value receiver.
 	return m.tasks.Load(m.client)
 }
 
 // Update is the main event loop.
-func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m AppModel) Update( //nolint:gocritic // hugeParam: Bubbletea requires value receiver.
+	msg tea.Msg,
+) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 
 	case tea.WindowSizeMsg:
@@ -75,6 +77,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.policies.SetSize(m.width, contentH)
 		m.artifacts.SetSize(m.width, contentH)
 		m.taskDetail.SetSize(m.width, contentH)
+
 		return m, nil
 
 	case views.TasksLoadedMsg:
@@ -125,11 +128,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.activeView == ViewTaskDetail {
 				m.activeView = m.prevView
 				m.tabs.setView(m.activeView)
+
 				return m, nil
 			}
 			if m.activeView == ViewArtifacts {
 				var cmd tea.Cmd
 				m.artifacts, cmd = m.artifacts.Update(msg, m.client)
+
 				return m, cmd
 			}
 
@@ -141,12 +146,14 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.taskDetail, cmd = m.taskDetail.SetTask(t, m.client)
 					m.activeView = ViewTaskDetail
 					m.tabs.setView(m.activeView)
+
 					return m, cmd
 				}
 			}
 			if m.activeView == ViewArtifacts {
 				var cmd tea.Cmd
 				m.artifacts, cmd = m.artifacts.Update(msg, m.client)
+
 				return m, cmd
 			}
 		}
@@ -158,23 +165,25 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 // View renders the full TUI.
-func (m AppModel) View() string {
+func (m AppModel) View() string { //nolint:gocritic // hugeParam: Bubbletea requires value receiver.
 	if m.width < minWidth || m.height < minHeight {
 		return m.tooSmallView()
 	}
+
 	return m.header.View() + "\n" + m.tabs.View() + "\n" + m.activeContent()
 }
 
-func (m AppModel) tooSmallView() string {
+func (m AppModel) tooSmallView() string { //nolint:gocritic // hugeParam: helper called from value-receiver View().
 	msg := fmt.Sprintf(
 		"Terminal too small (%dx%d). Minimum: %dx%d. Press q to quit.",
 		m.width, m.height, minWidth, minHeight,
 	)
 	lines := []string{"", "  " + styles.MutedStyle.Render(msg)}
+
 	return strings.Join(lines, "\n")
 }
 
-func (m AppModel) activeContent() string {
+func (m AppModel) activeContent() string { //nolint:gocritic // hugeParam: helper called from value-receiver View().
 	switch m.activeView {
 	case ViewTasks:
 		return m.tasks.View()
@@ -191,10 +200,13 @@ func (m AppModel) activeContent() string {
 	case ViewTaskDetail:
 		return m.taskDetail.View()
 	}
+
 	return ""
 }
 
-func (m AppModel) switchToView(v View) (AppModel, tea.Cmd) {
+func (m AppModel) switchToView( //nolint:gocritic // hugeParam: returns updated copy per Bubbletea pattern.
+	v View,
+) (AppModel, tea.Cmd) {
 	m.prevView = m.activeView
 	m.activeView = v
 	m.tabs.setView(v)
@@ -203,62 +215,82 @@ func (m AppModel) switchToView(v View) (AppModel, tea.Cmd) {
 	case ViewTasks:
 		if len(m.tasks.Tasks) == 0 && !m.tasks.Loading {
 			m.tasks.Loading = true
+
 			return m, m.tasks.Load(m.client)
 		}
 	case ViewUsers:
 		if len(m.users.Users) == 0 && !m.users.Loading {
 			m.users.Loading = true
+
 			return m, m.users.Load(m.client)
 		}
 	case ViewRoles:
 		if len(m.roles.Roles) == 0 && !m.roles.Loading {
 			m.roles.Loading = true
+
 			return m, m.roles.Load(m.client)
 		}
 	case ViewResourceGroups:
 		if len(m.resourceGroups.RGs) == 0 && !m.resourceGroups.Loading {
 			m.resourceGroups.Loading = true
+
 			return m, m.resourceGroups.Load(m.client)
 		}
 	case ViewPolicies:
 		if len(m.policies.Policies) == 0 && !m.policies.Loading {
 			m.policies.Loading = true
+
 			return m, m.policies.Load(m.client)
 		}
 	case ViewArtifacts:
 		if len(m.artifacts.Items) == 0 && !m.artifacts.Loading {
 			m.artifacts.Loading = true
+
 			return m, m.artifacts.Load(m.client)
 		}
+	case ViewTaskDetail:
+		// TaskDetail is entered via enter key, not direct navigation.
 	}
+
 	return m, nil
 }
 
-func (m AppModel) doRefresh() (AppModel, tea.Cmd) {
+func (m AppModel) doRefresh() (AppModel, tea.Cmd) { //nolint:gocritic // hugeParam: returns updated copy per Bubbletea pattern.
 	switch m.activeView {
 	case ViewTasks:
 		m.tasks.Loading = true
+
 		return m, m.tasks.Load(m.client)
 	case ViewUsers:
 		m.users.Loading = true
+
 		return m, m.users.Load(m.client)
 	case ViewRoles:
 		m.roles.Loading = true
+
 		return m, m.roles.Load(m.client)
 	case ViewResourceGroups:
 		m.resourceGroups.Loading = true
+
 		return m, m.resourceGroups.Load(m.client)
 	case ViewPolicies:
 		m.policies.Loading = true
+
 		return m, m.policies.Load(m.client)
 	case ViewArtifacts:
 		m.artifacts.Loading = true
+
 		return m, m.artifacts.Load(m.client)
+	case ViewTaskDetail:
+		// TaskDetail refreshes by reloading its task logs.
 	}
+
 	return m, nil
 }
 
-func (m AppModel) delegateKey(msg tea.KeyMsg) (AppModel, tea.Cmd) {
+func (m AppModel) delegateKey( //nolint:gocritic // hugeParam: returns updated copy per Bubbletea pattern.
+	msg tea.KeyMsg,
+) (AppModel, tea.Cmd) {
 	switch m.activeView {
 	case ViewTasks:
 		m.tasks, _ = m.tasks.Update(msg)
@@ -273,9 +305,11 @@ func (m AppModel) delegateKey(msg tea.KeyMsg) (AppModel, tea.Cmd) {
 	case ViewArtifacts:
 		var cmd tea.Cmd
 		m.artifacts, cmd = m.artifacts.Update(msg, m.client)
+
 		return m, cmd
 	case ViewTaskDetail:
 		m.taskDetail, _ = m.taskDetail.Update(msg)
 	}
+
 	return m, nil
 }

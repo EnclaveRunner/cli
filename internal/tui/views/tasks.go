@@ -1,16 +1,24 @@
 package views
 
 import (
+	"cli/internal/styles"
 	"context"
-	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
-	"cli/internal/styles"
-
+	"charm.land/lipgloss/v2"
 	"github.com/EnclaveRunner/sdk-go/enclave"
 	tea "github.com/charmbracelet/bubbletea"
-	"charm.land/lipgloss/v2"
+)
+
+const (
+	keyUp    = "up"
+	keyDown  = "down"
+	keyLeft  = "left"
+	keyRight = "right"
+	keyK     = "k"
+	keyJ     = "j"
 )
 
 // TasksLoadedMsg is returned by the Load command.
@@ -31,9 +39,12 @@ type TasksModel struct {
 }
 
 // Load fetches all tasks asynchronously.
-func (m TasksModel) Load(c *enclave.Client) tea.Cmd {
+func (m TasksModel) Load( //nolint:gocritic // hugeParam: Bubbletea value receiver.
+	c *enclave.Client,
+) tea.Cmd {
 	return func() tea.Msg {
 		tasks, err := enclave.Collect(c.ListTasks(context.Background()))
+
 		return TasksLoadedMsg{Tasks: tasks, Err: err}
 	}
 }
@@ -42,15 +53,18 @@ func (m TasksModel) Load(c *enclave.Client) tea.Cmd {
 func (m *TasksModel) SetSize(w, h int) { m.width = w; m.height = h }
 
 // SelectedTask returns the currently highlighted task, or zero value.
-func (m TasksModel) SelectedTask() (enclave.Task, bool) {
+func (m TasksModel) SelectedTask() (enclave.Task, bool) { //nolint:gocritic // hugeParam: Bubbletea requires value receiver.
 	if len(m.Tasks) == 0 || m.Cursor >= len(m.Tasks) {
 		return enclave.Task{}, false
 	}
+
 	return m.Tasks[m.Cursor], true
 }
 
 // Update handles messages for the tasks view.
-func (m TasksModel) Update(msg tea.Msg) (TasksModel, tea.Cmd) {
+func (m TasksModel) Update( //nolint:gocritic // hugeParam: Bubbletea value receiver.
+	msg tea.Msg,
+) (TasksModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case TasksLoadedMsg:
 		m.Loading = false
@@ -60,27 +74,28 @@ func (m TasksModel) Update(msg tea.Msg) (TasksModel, tea.Cmd) {
 
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "up", "k":
+		case keyUp, keyK:
 			if m.Cursor > 0 {
 				m.Cursor--
 			}
-		case "down", "j":
+		case keyDown, keyJ:
 			if m.Cursor < len(m.Tasks)-1 {
 				m.Cursor++
 			}
-		case "left":
+		case keyLeft:
 			if m.colOffset > 0 {
 				m.colOffset--
 			}
-		case "right":
+		case keyRight:
 			m.colOffset++
 		}
 	}
+
 	return m, nil
 }
 
 // View renders the tasks table.
-func (m TasksModel) View() string {
+func (m TasksModel) View() string { //nolint:gocritic // hugeParam: Bubbletea requires value receiver.
 	if m.Loading {
 		return styles.MutedStyle.Render("\n  Loading tasks…")
 	}
@@ -91,14 +106,22 @@ func (m TasksModel) View() string {
 		return styles.MutedStyle.Render("\n  No tasks found.")
 	}
 
-	headers := []string{"ID", "SOURCE", "STATE", "RETRIES", "LAST ERROR", "NEXT PROCESS"}
+	headers := []string{
+		"ID",
+		"SOURCE",
+		"STATE",
+		"RETRIES",
+		"LAST ERROR",
+		"NEXT PROCESS",
+	}
 	colWidths := make([]int, len(headers))
 	for i, h := range headers {
 		colWidths[i] = len(h)
 	}
 
 	rows := make([][]string, len(m.Tasks))
-	for i, t := range m.Tasks {
+	for i := range m.Tasks {
+		t := &m.Tasks[i]
 		id := t.ID
 		source := t.Source
 		if len(source) > 30 {
@@ -106,7 +129,7 @@ func (m TasksModel) View() string {
 		}
 		state := styles.TaskStateBadge(t.Status.State)
 		statePlain := stripANSI(state)
-		retries := fmt.Sprintf("%d", t.Status.Retries)
+		retries := strconv.Itoa(t.Status.Retries)
 		lastErr := t.Status.LastError
 		if len(lastErr) > 30 {
 			lastErr = lastErr[:29] + "…"
@@ -169,6 +192,7 @@ func padRight(s string, n int) string {
 	if len(s) >= n {
 		return s
 	}
+
 	return s + strings.Repeat(" ", n-len(s))
 }
 
@@ -178,16 +202,19 @@ func stripANSI(s string) string {
 	for _, r := range s {
 		if r == '\x1b' {
 			inEsc = true
+
 			continue
 		}
 		if inEsc {
 			if r == 'm' {
 				inEsc = false
 			}
+
 			continue
 		}
 		b.WriteRune(r)
 	}
+
 	return b.String()
 }
 
@@ -195,5 +222,6 @@ func maxInt(a, b int) int {
 	if a > b {
 		return a
 	}
+
 	return b
 }

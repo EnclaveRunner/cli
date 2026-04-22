@@ -1,10 +1,9 @@
 package tui
 
 import (
+	"cli/internal/styles"
 	"fmt"
 	"strings"
-
-	"cli/internal/styles"
 
 	"charm.land/lipgloss/v2"
 )
@@ -48,9 +47,10 @@ const logoWidth = 11
 // renderLogoLine renders one logo line (slice of segments) as a single string.
 func renderLogoLine(segs []logoSeg) string {
 	var sb strings.Builder
-	for _, s := range segs {
-		sb.WriteString(s.style.Render(s.text))
+	for i := range segs {
+		sb.WriteString(segs[i].style.Render(segs[i].text))
 	}
+
 	return sb.String()
 }
 
@@ -69,8 +69,6 @@ func newHeaderPanel(apiURL, username, version string) headerPanel {
 	return headerPanel{apiURL: apiURL, username: username, version: version}
 }
 
-func (h *headerPanel) setWidth(w int) { h.width = w }
-
 // Height returns the fixed number of lines the header panel occupies
 // (top border + content rows + bottom border).
 func (h headerPanel) Height() int { return 2 + headerContentRows }
@@ -78,7 +76,8 @@ func (h headerPanel) Height() int { return 2 + headerContentRows }
 func (h headerPanel) View() string {
 	// Reserve space: logo col + 2 separators + margins
 	// " " + col1 + " │ " + col2 + " │ " + col3 + " "
-	// margins: 1+1+1+1+1+1 = 6 chars, separators: 2 × "│" = 2 chars → total overhead = 8
+	// margins: 1+1+1+1+1+1 = 6 chars, separators: 2 × "│" = 2 chars → total
+	// overhead = 8
 	logoColW := logoWidth + 2 // +2 for side margins inside column
 	overhead := 8
 	infoColW := 36
@@ -89,9 +88,21 @@ func (h headerPanel) View() string {
 
 	// Column 1: connection info (7 lines, last 4 blank).
 	infoLines := []string{
-		styles.MutedStyle.Render("server  ") + lipgloss.NewStyle().Foreground(styles.ColorLogoTeal).Render(truncate(h.apiURL, infoColW-9)),
-		styles.MutedStyle.Render("user    ") + lipgloss.NewStyle().Foreground(styles.ColorPrimaryGreen).Render(h.username),
-		styles.MutedStyle.Render("version ") + lipgloss.NewStyle().Foreground(styles.ColorSlateLight).Render(h.version),
+		styles.MutedStyle.Render(
+			"server  ",
+		) + lipgloss.NewStyle().
+			Foreground(styles.ColorLogoTeal).
+			Render(truncate(h.apiURL, infoColW-9)),
+		styles.MutedStyle.Render(
+			"user    ",
+		) + lipgloss.NewStyle().
+			Foreground(styles.ColorPrimaryGreen).
+			Render(h.username),
+		styles.MutedStyle.Render(
+			"version ",
+		) + lipgloss.NewStyle().
+			Foreground(styles.ColorSlateLight).
+			Render(h.version),
 		"",
 		"",
 		"",
@@ -114,7 +125,9 @@ func (h headerPanel) View() string {
 	}
 
 	sep := lipgloss.NewStyle().Foreground(styles.ColorDarkGreen).Render("│")
-	borderLine := lipgloss.NewStyle().Foreground(styles.ColorDarkGreen).Render(strings.Repeat("─", h.width))
+	borderLine := lipgloss.NewStyle().
+		Foreground(styles.ColorDarkGreen).
+		Render(strings.Repeat("─", h.width))
 
 	var b strings.Builder
 	b.WriteString(borderLine + "\n")
@@ -124,7 +137,8 @@ func (h headerPanel) View() string {
 		rawBind := safeGetStr(bindLines, i)
 		l2 := padTo(rawBind, bindColW)
 
-		// Logo: right-align within its column (pad left so it hugs the right border).
+		// Logo: right-align within its column (pad left so it hugs the right
+		// border).
 		styledLogo := ""
 		if i < len(logoArt) {
 			styledLogo = renderLogoLine(logoArt[i])
@@ -139,8 +153,11 @@ func (h headerPanel) View() string {
 		b.WriteString(" " + l1 + " " + sep + " " + l2 + " " + sep + l3 + "\n")
 	}
 	b.WriteString(borderLine)
+
 	return b.String()
 }
+
+func (h *headerPanel) setWidth(w int) { h.width = w }
 
 // tabRibbon renders the tab bar for view switching.
 type tabRibbon struct {
@@ -149,9 +166,6 @@ type tabRibbon struct {
 }
 
 func newTabRibbon() tabRibbon { return tabRibbon{} }
-
-func (t *tabRibbon) setView(v View) { t.activeView = v }
-func (t *tabRibbon) setWidth(w int) { t.width = w }
 
 // navigableTabs is the ordered list of switchable views.
 var navigableTabs = []View{
@@ -195,10 +209,16 @@ func (t tabRibbon) View() string {
 	plain := stripANSI(ribbon)
 	pad := t.width - len([]rune(plain))
 	if pad > 0 {
-		ribbon += lipgloss.NewStyle().Background(styles.ColorNearBlack).Render(strings.Repeat(" ", pad))
+		ribbon += lipgloss.NewStyle().
+			Background(styles.ColorNearBlack).
+			Render(strings.Repeat(" ", pad))
 	}
+
 	return ribbon
 }
+
+func (t *tabRibbon) setView(v View) { t.activeView = v }
+func (t *tabRibbon) setWidth(w int) { t.width = w }
 
 // --- helpers ---
 
@@ -209,6 +229,7 @@ func padTo(s string, w int) string {
 	if pad <= 0 {
 		return s
 	}
+
 	return s + strings.Repeat(" ", pad)
 }
 
@@ -216,6 +237,7 @@ func safeGetStr(lines []string, i int) string {
 	if i < len(lines) {
 		return lines[i]
 	}
+
 	return ""
 }
 
@@ -224,5 +246,6 @@ func truncate(s string, n int) string {
 	if len(runes) <= n {
 		return s
 	}
+
 	return string(runes[:n-1]) + "…"
 }

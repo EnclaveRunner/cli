@@ -16,5 +16,6 @@ func (p *jsonPrinter) Print(rows any) error {
 	if err := enc.Encode(rows); err != nil {
 		return fmt.Errorf("encode json: %w", err)
 	}
+
 	return nil
 }

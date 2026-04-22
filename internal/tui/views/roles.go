@@ -1,15 +1,14 @@
-package views
+package views //nolint:dupl // Bubbletea view models follow identical structure by design.
 
 import (
+	"cli/internal/styles"
 	"context"
-	"fmt"
+	"strconv"
 	"strings"
 
-	"cli/internal/styles"
-
+	"charm.land/lipgloss/v2"
 	"github.com/EnclaveRunner/sdk-go/enclave"
 	tea "github.com/charmbracelet/bubbletea"
-	"charm.land/lipgloss/v2"
 )
 
 // RolesLoadedMsg carries loaded roles.
@@ -19,6 +18,8 @@ type RolesLoadedMsg struct {
 }
 
 // RolesModel is the roles list view.
+//
+
 type RolesModel struct {
 	Roles     []enclave.Role
 	Cursor    int
@@ -30,9 +31,12 @@ type RolesModel struct {
 }
 
 // Load fetches all roles.
-func (m RolesModel) Load(c *enclave.Client) tea.Cmd {
+func (m RolesModel) Load( //nolint:gocritic // hugeParam: Bubbletea requires value receiver.
+	c *enclave.Client,
+) tea.Cmd {
 	return func() tea.Msg {
 		roles, err := enclave.Collect(c.ListRoles(context.Background()))
+
 		return RolesLoadedMsg{Roles: roles, Err: err}
 	}
 }
@@ -41,7 +45,9 @@ func (m RolesModel) Load(c *enclave.Client) tea.Cmd {
 func (m *RolesModel) SetSize(w, h int) { m.width = w; m.height = h }
 
 // Update handles messages.
-func (m RolesModel) Update(msg tea.Msg) (RolesModel, tea.Cmd) {
+func (m RolesModel) Update( //nolint:gocritic // hugeParam: Bubbletea requires value receiver.
+	msg tea.Msg,
+) (RolesModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case RolesLoadedMsg:
 		m.Loading = false
@@ -50,27 +56,28 @@ func (m RolesModel) Update(msg tea.Msg) (RolesModel, tea.Cmd) {
 		m.Cursor = 0
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "up", "k":
+		case keyUp, keyK:
 			if m.Cursor > 0 {
 				m.Cursor--
 			}
-		case "down", "j":
+		case keyDown, keyJ:
 			if m.Cursor < len(m.Roles)-1 {
 				m.Cursor++
 			}
-		case "left":
+		case keyLeft:
 			if m.colOffset > 0 {
 				m.colOffset--
 			}
-		case "right":
+		case keyRight:
 			m.colOffset++
 		}
 	}
+
 	return m, nil
 }
 
 // View renders the roles table.
-func (m RolesModel) View() string {
+func (m RolesModel) View() string { //nolint:gocritic // hugeParam: Bubbletea requires value receiver.
 	if m.Loading {
 		return styles.MutedStyle.Render("\n  Loading roles…")
 	}
@@ -86,7 +93,7 @@ func (m RolesModel) View() string {
 
 	rows := make([][]string, len(m.Roles))
 	for i, r := range m.Roles {
-		count := fmt.Sprintf("%d", len(r.Users))
+		count := strconv.Itoa(len(r.Users))
 		rows[i] = []string{r.Name, count}
 		updateWidth(&colWidths[0], len(r.Name))
 		updateWidth(&colWidths[1], len(count))
@@ -119,5 +126,6 @@ func (m RolesModel) View() string {
 		}
 		b.WriteString(strings.Join(cells[startCol:], "") + "\n")
 	}
+
 	return b.String()
 }

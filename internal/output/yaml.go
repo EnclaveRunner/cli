@@ -17,5 +17,6 @@ func (p *yamlPrinter) Print(rows any) error {
 	if err := enc.Encode(rows); err != nil {
 		return fmt.Errorf("encode yaml: %w", err)
 	}
+
 	return nil
 }

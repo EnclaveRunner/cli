@@ -1,16 +1,15 @@
 package views
 
 import (
+	"cli/internal/styles"
 	"context"
 	"fmt"
 	"strings"
 
-	"cli/internal/styles"
-
-	"github.com/EnclaveRunner/sdk-go/enclave"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/bubbles/viewport"
 	"charm.land/lipgloss/v2"
+	"github.com/EnclaveRunner/sdk-go/enclave"
+	"github.com/charmbracelet/bubbles/viewport"
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 // TaskLogsLoadedMsg carries loaded task logs.
@@ -31,13 +30,18 @@ type TaskDetailModel struct {
 }
 
 // SetTask sets the task to display and starts loading logs.
-func (m TaskDetailModel) SetTask(t enclave.Task, c *enclave.Client) (TaskDetailModel, tea.Cmd) {
+func (m TaskDetailModel) SetTask( //nolint:gocritic // hugeParam: Bubbletea requires value receiver.
+	t enclave.Task, //nolint:gocritic // hugeParam: enclave.Task is a value type by design.
+	c *enclave.Client,
+) (TaskDetailModel, tea.Cmd) {
 	m.task = t
 	m.loading = true
 	m.logs = nil
 	m.err = nil
+
 	return m, func() tea.Msg {
 		logs, err := c.GetTaskLogs(context.Background(), t.ID)
+
 		return TaskLogsLoadedMsg{Logs: logs, Err: err}
 	}
 }
@@ -51,23 +55,27 @@ func (m *TaskDetailModel) SetSize(w, h int) {
 }
 
 // Update handles messages for the task detail view.
-func (m TaskDetailModel) Update(msg tea.Msg) (TaskDetailModel, tea.Cmd) {
+func (m TaskDetailModel) Update( //nolint:gocritic // hugeParam: Bubbletea requires value receiver.
+	msg tea.Msg,
+) (TaskDetailModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case TaskLogsLoadedMsg:
 		m.loading = false
 		m.err = msg.Err
 		m.logs = msg.Logs
 		m.vp.SetContent(m.renderLogs())
+
 		return m, nil
 	default:
 		var cmd tea.Cmd
 		m.vp, cmd = m.vp.Update(msg)
+
 		return m, cmd
 	}
 }
 
 // View renders the task detail pane.
-func (m TaskDetailModel) View() string {
+func (m TaskDetailModel) View() string { //nolint:gocritic // hugeParam: Bubbletea requires value receiver.
 	t := m.task
 
 	field := func(label, value string) string {
@@ -79,9 +87,16 @@ func (m TaskDetailModel) View() string {
 	b.WriteString(styles.TitleStyle.Render("Task "+t.ID) + "\n\n")
 	b.WriteString(field("Source", t.Source) + "\n")
 	b.WriteString(field("State", styles.TaskStateBadge(t.Status.State)) + "\n")
-	b.WriteString(field("Retries", fmt.Sprintf("%d / %d", t.Status.Retries, t.Retries)) + "\n")
+	b.WriteString(
+		field(
+			"Retries",
+			fmt.Sprintf("%d / %d", t.Status.Retries, t.Retries),
+		) + "\n",
+	)
 	if t.Status.LastError != "" {
-		b.WriteString(field("Last Error", styles.ErrorStyle.Render(t.Status.LastError)) + "\n")
+		b.WriteString(
+			field("Last Error", styles.ErrorStyle.Render(t.Status.LastError)) + "\n",
+		)
 	}
 	if !t.Status.CompletedAt.IsZero() {
 		b.WriteString(field("Completed", t.Status.CompletedAt.String()) + "\n")
@@ -97,7 +112,7 @@ func (m TaskDetailModel) View() string {
 	return b.String()
 }
 
-func (m TaskDetailModel) renderLogs() string {
+func (m TaskDetailModel) renderLogs() string { //nolint:gocritic // hugeParam: helper called from value-receiver methods.
 	if m.err != nil {
 		return styles.ErrorStyle.Render("Error loading logs: " + m.err.Error())
 	}
@@ -115,6 +130,7 @@ func (m TaskDetailModel) renderLogs() string {
 				l.Message + "\n",
 		)
 	}
+
 	return b.String()
 }
 

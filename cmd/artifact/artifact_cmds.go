@@ -1,12 +1,12 @@
 package artifact
 
 import (
-	"fmt"
-	"os"
-	"strings"
-
 	"cli/internal/client"
 	"cli/internal/output"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/EnclaveRunner/sdk-go/enclave"
 	"github.com/spf13/cobra"
@@ -23,6 +23,7 @@ func newNamespaceCmd() *cobra.Command {
 		RunE:  runNamespaceList,
 	}
 	cmd.AddCommand(listCmd)
+
 	return cmd
 }
 
@@ -33,7 +34,7 @@ func runNamespaceList(cmd *cobra.Command, _ []string) error {
 	// ListArtifactNamespaces returns Artifact objects; we only show namespace.
 	nsCol := []output.Column{
 		{Header: "NAMESPACE", Extract: func(r any) string {
-			a := r.(enclave.Artifact)
+			a, _ := r.(enclave.Artifact)
 			// Namespace entries have no Name; deduplicate by showing Namespace.
 			return a.Namespace
 		}},
@@ -71,12 +72,17 @@ func newListCmd() *cobra.Command {
 func runList(cmd *cobra.Command, args []string) error {
 	c := client.FromContext(cmd.Context())
 	cfg := client.ConfigFromContext(cmd.Context())
-	printer := output.New(output.ParseFormat(cfg.Output), output.ArtifactColumns, os.Stdout)
+	printer := output.New(
+		output.ParseFormat(cfg.Output),
+		output.ArtifactColumns,
+		os.Stdout,
+	)
 
 	artifacts, err := enclave.Collect(c.ListArtifacts(cmd.Context(), args[0]))
 	if err != nil {
 		return fmt.Errorf("list artifacts: %w", err)
 	}
+
 	return printer.Print(artifacts)
 }
 
@@ -92,12 +98,19 @@ func newVersionsCmd() *cobra.Command {
 func runVersions(cmd *cobra.Command, args []string) error {
 	c := client.FromContext(cmd.Context())
 	cfg := client.ConfigFromContext(cmd.Context())
-	printer := output.New(output.ParseFormat(cfg.Output), output.ArtifactColumns, os.Stdout)
+	printer := output.New(
+		output.ParseFormat(cfg.Output),
+		output.ArtifactColumns,
+		os.Stdout,
+	)
 
-	versions, err := enclave.Collect(c.ListArtifactVersions(cmd.Context(), args[0], args[1]))
+	versions, err := enclave.Collect(
+		c.ListArtifactVersions(cmd.Context(), args[0], args[1]),
+	)
 	if err != nil {
 		return fmt.Errorf("list artifact versions: %w", err)
 	}
+
 	return printer.Print(versions)
 }
 
@@ -117,14 +130,19 @@ func runUpload(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("open file: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	result, err := c.UploadArtifact(cmd.Context(), args[0], args[1], f)
 	if err != nil {
 		return fmt.Errorf("upload artifact: %w", err)
 	}
-	fmt.Fprintf(os.Stdout, "Uploaded. Version hash: %s\n", result.VersionHash)
-	return nil
+	_, err = fmt.Fprintf(
+		os.Stdout,
+		"Uploaded. Version hash: %s\n",
+		result.VersionHash,
+	)
+
+	return err
 }
 
 func newGetCmd() *cobra.Command {
@@ -139,7 +157,11 @@ func newGetCmd() *cobra.Command {
 func runGet(cmd *cobra.Command, args []string) error {
 	c := client.FromContext(cmd.Context())
 	cfg := client.ConfigFromContext(cmd.Context())
-	printer := output.New(output.ParseFormat(cfg.Output), output.ArtifactColumns, os.Stdout)
+	printer := output.New(
+		output.ParseFormat(cfg.Output),
+		output.ArtifactColumns,
+		os.Stdout,
+	)
 
 	namespace, name, ref := args[0], args[1], args[2]
 	var a enclave.Artifact
@@ -152,6 +174,7 @@ func runGet(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("get artifact: %w", err)
 	}
+
 	return printer.Print([]any{a})
 }
 
@@ -163,6 +186,7 @@ func newDownloadCmd() *cobra.Command {
 		RunE:  runDownload,
 	}
 	cmd.Flags().StringP("output", "o", "", "Output file path (default: stdout)")
+
 	return cmd
 }
 
@@ -183,18 +207,20 @@ func runDownload(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("download artifact: %w", err)
 	}
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 
 	out, _ := cmd.Flags().GetString("output")
 	var w *os.File
 	if out == "" {
 		w = os.Stdout
 	} else {
-		w, err = os.Create(out)
+		w, err = os.Create(
+			filepath.Clean(out),
+		) // #nosec G304 -- user-supplied download path
 		if err != nil {
 			return fmt.Errorf("create output file: %w", err)
 		}
-		defer w.Close()
+		defer func() { _ = w.Close() }()
 	}
 
 	buf := make([]byte, 32*1024)
@@ -209,6 +235,7 @@ func runDownload(cmd *cobra.Command, args []string) error {
 			break
 		}
 	}
+
 	return nil
 }
 
@@ -221,13 +248,18 @@ func newTagCmd() *cobra.Command {
 	}
 	cmd.Flags().StringSlice("tags", nil, "New tag list (replaces existing tags)")
 	_ = cmd.MarkFlagRequired("tags")
+
 	return cmd
 }
 
 func runTag(cmd *cobra.Command, args []string) error {
 	c := client.FromContext(cmd.Context())
 	cfg := client.ConfigFromContext(cmd.Context())
-	printer := output.New(output.ParseFormat(cfg.Output), output.ArtifactColumns, os.Stdout)
+	printer := output.New(
+		output.ParseFormat(cfg.Output),
+		output.ArtifactColumns,
+		os.Stdout,
+	)
 
 	namespace, name, ref := args[0], args[1], args[2]
 	tags, _ := cmd.Flags().GetStringSlice("tags")
@@ -235,13 +267,26 @@ func runTag(cmd *cobra.Command, args []string) error {
 	var a enclave.Artifact
 	var err error
 	if isHash(ref) {
-		a, err = c.UpdateArtifactTagsByHash(cmd.Context(), namespace, name, ref, tags)
+		a, err = c.UpdateArtifactTagsByHash(
+			cmd.Context(),
+			namespace,
+			name,
+			ref,
+			tags,
+		)
 	} else {
-		a, err = c.UpdateArtifactTagsByTag(cmd.Context(), namespace, name, ref, tags)
+		a, err = c.UpdateArtifactTagsByTag(
+			cmd.Context(),
+			namespace,
+			name,
+			ref,
+			tags,
+		)
 	}
 	if err != nil {
 		return fmt.Errorf("update artifact tags: %w", err)
 	}
+
 	return printer.Print([]any{a})
 }
 
@@ -257,7 +302,11 @@ func newDeleteCmd() *cobra.Command {
 func runDelete(cmd *cobra.Command, args []string) error {
 	c := client.FromContext(cmd.Context())
 	cfg := client.ConfigFromContext(cmd.Context())
-	printer := output.New(output.ParseFormat(cfg.Output), output.ArtifactColumns, os.Stdout)
+	printer := output.New(
+		output.ParseFormat(cfg.Output),
+		output.ArtifactColumns,
+		os.Stdout,
+	)
 
 	namespace, name, ref := args[0], args[1], args[2]
 	var a enclave.Artifact
@@ -270,6 +319,7 @@ func runDelete(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("delete artifact: %w", err)
 	}
+
 	return printer.Print([]any{a})
 }
 
@@ -279,9 +329,10 @@ func isHash(s string) bool {
 		return false
 	}
 	for _, r := range strings.ToLower(s) {
-		if !((r >= '0' && r <= '9') || (r >= 'a' && r <= 'f')) {
+		if (r < '0' || r > '9') && (r < 'a' || r > 'f') {
 			return false
 		}
 	}
+
 	return true
 }

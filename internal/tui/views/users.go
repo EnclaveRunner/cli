@@ -1,14 +1,13 @@
 package views
 
 import (
+	"cli/internal/styles"
 	"context"
 	"strings"
 
-	"cli/internal/styles"
-
+	"charm.land/lipgloss/v2"
 	"github.com/EnclaveRunner/sdk-go/enclave"
 	tea "github.com/charmbracelet/bubbletea"
-	"charm.land/lipgloss/v2"
 )
 
 // UsersLoadedMsg carries loaded users.
@@ -29,9 +28,12 @@ type UsersModel struct {
 }
 
 // Load fetches all users.
-func (m UsersModel) Load(c *enclave.Client) tea.Cmd {
+func (m UsersModel) Load( //nolint:gocritic // hugeParam: Bubbletea value receiver.
+	c *enclave.Client,
+) tea.Cmd {
 	return func() tea.Msg {
 		users, err := enclave.Collect(c.ListUsers(context.Background()))
+
 		return UsersLoadedMsg{Users: users, Err: err}
 	}
 }
@@ -40,7 +42,9 @@ func (m UsersModel) Load(c *enclave.Client) tea.Cmd {
 func (m *UsersModel) SetSize(w, h int) { m.width = w; m.height = h }
 
 // Update handles messages.
-func (m UsersModel) Update(msg tea.Msg) (UsersModel, tea.Cmd) {
+func (m UsersModel) Update( //nolint:gocritic // hugeParam: Bubbletea value receiver.
+	msg tea.Msg,
+) (UsersModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case UsersLoadedMsg:
 		m.Loading = false
@@ -49,27 +53,28 @@ func (m UsersModel) Update(msg tea.Msg) (UsersModel, tea.Cmd) {
 		m.Cursor = 0
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "up", "k":
+		case keyUp, keyK:
 			if m.Cursor > 0 {
 				m.Cursor--
 			}
-		case "down", "j":
+		case keyDown, keyJ:
 			if m.Cursor < len(m.Users)-1 {
 				m.Cursor++
 			}
-		case "left":
+		case keyLeft:
 			if m.colOffset > 0 {
 				m.colOffset--
 			}
-		case "right":
+		case keyRight:
 			m.colOffset++
 		}
 	}
+
 	return m, nil
 }
 
 // View renders the users table.
-func (m UsersModel) View() string {
+func (m UsersModel) View() string { //nolint:gocritic // hugeParam: Bubbletea requires value receiver.
 	if m.Loading {
 		return styles.MutedStyle.Render("\n  Loading users…")
 	}
@@ -119,5 +124,6 @@ func (m UsersModel) View() string {
 		}
 		b.WriteString(strings.Join(cells[startCol:], "") + "\n")
 	}
+
 	return b.String()
 }

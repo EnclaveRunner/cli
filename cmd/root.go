@@ -1,10 +1,6 @@
 package cmd
 
 import (
-	"fmt"
-	"os"
-	"strings"
-
 	"cli/cmd/artifact"
 	"cli/cmd/policy"
 	"cli/cmd/resourcegroup"
@@ -14,6 +10,9 @@ import (
 	"cli/internal/client"
 	"cli/internal/config"
 	"cli/internal/tui"
+	"fmt"
+	"os"
+	"strings"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -27,7 +26,8 @@ var rootCmd = &cobra.Command{
 	SilenceUsage: true,
 	PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 		// Skip setup for commands that don't need the SDK client.
-		if cmd.Name() == "version" || cmd.Name() == "help" || cmd.Name() == "completion" {
+		if cmd.Name() == "version" || cmd.Name() == "help" ||
+			cmd.Name() == "completion" {
 			return nil
 		}
 
@@ -64,8 +64,15 @@ var rootCmd = &cobra.Command{
 		if term.IsTerminal(int(os.Stdout.Fd())) {
 			c := client.FromContext(cmd.Context())
 			cfg := client.ConfigFromContext(cmd.Context())
-			return tui.RunWithConfig(c, cfg.APIURL, cfg.Username, strings.TrimSpace(versionFile))
+
+			return tui.RunWithConfig(
+				c,
+				cfg.APIURL,
+				cfg.Username,
+				strings.TrimSpace(versionFile),
+			)
 		}
+
 		return cmd.Help()
 	},
 }
@@ -79,10 +86,18 @@ func Execute() {
 
 func init() {
 	pf := rootCmd.PersistentFlags()
-	pf.String("api-url", "", "Enclave API URL (overrides config and ENCLAVE_API_URL)")
+	pf.String(
+		"api-url",
+		"",
+		"Enclave API URL (overrides config and ENCLAVE_API_URL)",
+	)
 	pf.String("username", "", "Username (overrides config and ENCLAVE_USERNAME)")
 	pf.String("password", "", "Password (overrides config and ENCLAVE_PASSWORD)")
-	pf.String("log-level", "", "Log level: trace, debug, info, warn, error (default: info)")
+	pf.String(
+		"log-level",
+		"",
+		"Log level: trace, debug, info, warn, error (default: info)",
+	)
 	pf.String("output", "table", "Output format: table, json, yaml")
 
 	rootCmd.AddCommand(

@@ -9,15 +9,18 @@ func stripANSI(s string) string {
 	for _, r := range s {
 		if r == '\x1b' {
 			inEsc = true
+
 			continue
 		}
 		if inEsc {
 			if r == 'm' {
 				inEsc = false
 			}
+
 			continue
 		}
 		b.WriteRune(r)
 	}
+
 	return b.String()
 }

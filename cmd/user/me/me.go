@@ -15,5 +15,6 @@ func NewCmd() *cobra.Command {
 		newUpdateCmd(),
 		newDeleteCmd(),
 	)
+
 	return cmd
 }

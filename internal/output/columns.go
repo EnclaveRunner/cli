@@ -1,103 +1,239 @@
 package output
 
 import (
-	"fmt"
+	"cli/internal/styles"
 	"strconv"
 	"strings"
 	"time"
-
-	"cli/internal/styles"
 
 	"github.com/EnclaveRunner/sdk-go/enclave"
 )
 
 // UserColumns defines table columns for enclave.User.
 var UserColumns = []Column{
-	{Header: "NAME", Extract: func(r any) string { return r.(enclave.User).Name }},
-	{Header: "DISPLAY NAME", Extract: func(r any) string { return r.(enclave.User).DisplayName }},
-	{Header: "ROLES", Extract: func(r any) string { return strings.Join(r.(enclave.User).Roles, ", ") }},
+	{
+		Header: "NAME",
+		Extract: func(r any) string {
+			u, _ := r.(enclave.User)
+
+			return u.Name
+		},
+	},
+	{
+		Header: "DISPLAY NAME",
+		Extract: func(r any) string {
+			u, _ := r.(enclave.User)
+
+			return u.DisplayName
+		},
+	},
+	{
+		Header: "ROLES",
+		Extract: func(r any) string {
+			u, _ := r.(enclave.User)
+
+			return strings.Join(u.Roles, ", ")
+		},
+	},
 }
 
 // RoleColumns defines table columns for enclave.Role.
 var RoleColumns = []Column{
-	{Header: "NAME", Extract: func(r any) string { return r.(enclave.Role).Name }},
+	{
+		Header: "NAME",
+		Extract: func(r any) string {
+			role, _ := r.(enclave.Role)
+
+			return role.Name
+		},
+	},
 	{Header: "USERS", Extract: func(r any) string {
-		users := r.(enclave.Role).Users
-		return fmt.Sprintf("%d", len(users))
+		role, _ := r.(enclave.Role)
+
+		return strconv.Itoa(len(role.Users))
 	}},
-	{Header: "USER LIST", Extract: func(r any) string { return strings.Join(r.(enclave.Role).Users, ", ") }},
+	{
+		Header: "USER LIST",
+		Extract: func(r any) string {
+			role, _ := r.(enclave.Role)
+
+			return strings.Join(role.Users, ", ")
+		},
+	},
 }
 
 // ResourceGroupColumns defines table columns for enclave.ResourceGroup.
 var ResourceGroupColumns = []Column{
-	{Header: "NAME", Extract: func(r any) string { return r.(enclave.ResourceGroup).Name }},
+	{
+		Header: "NAME",
+		Extract: func(r any) string {
+			rg, _ := r.(enclave.ResourceGroup)
+
+			return rg.Name
+		},
+	},
 	{Header: "ENDPOINTS", Extract: func(r any) string {
-		return fmt.Sprintf("%d", len(r.(enclave.ResourceGroup).Endpoints))
+		rg, _ := r.(enclave.ResourceGroup)
+
+		return strconv.Itoa(len(rg.Endpoints))
 	}},
 	{Header: "ENDPOINT LIST", Extract: func(r any) string {
-		return strings.Join(r.(enclave.ResourceGroup).Endpoints, ", ")
+		rg, _ := r.(enclave.ResourceGroup)
+
+		return strings.Join(rg.Endpoints, ", ")
 	}},
 }
 
 // PolicyColumns defines table columns for enclave.Policy.
 var PolicyColumns = []Column{
-	{Header: "ROLE", Extract: func(r any) string { return r.(enclave.Policy).Role }},
-	{Header: "RESOURCE GROUP", Extract: func(r any) string { return r.(enclave.Policy).ResourceGroup }},
-	{Header: "METHOD", Extract: func(r any) string { return string(r.(enclave.Policy).Method) }},
+	{
+		Header: "ROLE",
+		Extract: func(r any) string {
+			p, _ := r.(enclave.Policy)
+
+			return p.Role
+		},
+	},
+	{
+		Header: "RESOURCE GROUP",
+		Extract: func(r any) string {
+			p, _ := r.(enclave.Policy)
+
+			return p.ResourceGroup
+		},
+	},
+	{
+		Header: "METHOD",
+		Extract: func(r any) string {
+			p, _ := r.(enclave.Policy)
+
+			return string(p.Method)
+		},
+	},
 }
 
 // TaskColumns defines table columns for enclave.Task.
 var TaskColumns = []Column{
-	{Header: "ID", Extract: func(r any) string { return r.(enclave.Task).ID }},
-	{Header: "SOURCE", Extract: func(r any) string { return r.(enclave.Task).Source }},
+	{Header: "ID", Extract: func(r any) string {
+		t, _ := r.(enclave.Task)
+
+		return t.ID
+	}},
+	{
+		Header: "SOURCE",
+		Extract: func(r any) string {
+			t, _ := r.(enclave.Task)
+
+			return t.Source
+		},
+	},
 	{Header: "STATE", MinWidth: 14, Extract: func(r any) string {
-		return styles.TaskStateBadge(r.(enclave.Task).Status.State)
+		t, _ := r.(enclave.Task)
+
+		return styles.TaskStateBadge(t.Status.State)
 	}},
 	{Header: "RETRIES", Extract: func(r any) string {
-		return strconv.Itoa(r.(enclave.Task).Status.Retries)
+		t, _ := r.(enclave.Task)
+
+		return strconv.Itoa(t.Status.Retries)
 	}},
 	{Header: "LAST ERROR", MinWidth: 20, Extract: func(r any) string {
-		e := r.(enclave.Task).Status.LastError
+		t, _ := r.(enclave.Task)
+		e := t.Status.LastError
 		if len(e) > 40 {
 			return e[:40] + "…"
 		}
+
 		return e
 	}},
 	{Header: "NEXT PROCESS", Extract: func(r any) string {
-		t := r.(enclave.Task).Status.NextProcessAt
-		if t.IsZero() {
+		t, _ := r.(enclave.Task)
+		if t.Status.NextProcessAt.IsZero() {
 			return "-"
 		}
-		return t.Format(time.RFC3339)
+
+		return t.Status.NextProcessAt.Format(time.RFC3339)
 	}},
 }
 
 // TaskLogColumns defines table columns for enclave.TaskLog.
 var TaskLogColumns = []Column{
 	{Header: "TIME", Extract: func(r any) string {
-		return r.(enclave.TaskLog).Timestamp.Format("15:04:05.000")
+		l, _ := r.(enclave.TaskLog)
+
+		return l.Timestamp.Format("15:04:05.000")
 	}},
-	{Header: "LEVEL", MinWidth: 7, Extract: func(r any) string { return r.(enclave.TaskLog).Level }},
-	{Header: "ISSUER", Extract: func(r any) string { return r.(enclave.TaskLog).Issuer }},
-	{Header: "MESSAGE", MinWidth: 30, Extract: func(r any) string { return r.(enclave.TaskLog).Message }},
+	{
+		Header:   "LEVEL",
+		MinWidth: 7,
+		Extract: func(r any) string {
+			l, _ := r.(enclave.TaskLog)
+
+			return l.Level
+		},
+	},
+	{
+		Header: "ISSUER",
+		Extract: func(r any) string {
+			l, _ := r.(enclave.TaskLog)
+
+			return l.Issuer
+		},
+	},
+	{
+		Header:   "MESSAGE",
+		MinWidth: 30,
+		Extract: func(r any) string {
+			l, _ := r.(enclave.TaskLog)
+
+			return l.Message
+		},
+	},
 }
 
 // ArtifactColumns defines table columns for enclave.Artifact.
 var ArtifactColumns = []Column{
-	{Header: "NAMESPACE", Extract: func(r any) string { return r.(enclave.Artifact).Namespace }},
-	{Header: "NAME", Extract: func(r any) string { return r.(enclave.Artifact).Name }},
+	{
+		Header: "NAMESPACE",
+		Extract: func(r any) string {
+			a, _ := r.(enclave.Artifact)
+
+			return a.Namespace
+		},
+	},
+	{
+		Header: "NAME",
+		Extract: func(r any) string {
+			a, _ := r.(enclave.Artifact)
+
+			return a.Name
+		},
+	},
 	{Header: "HASH", MinWidth: 16, Extract: func(r any) string {
-		h := r.(enclave.Artifact).VersionHash
+		a, _ := r.(enclave.Artifact)
+		h := a.VersionHash
 		if len(h) > 16 {
 			return h[:16]
 		}
+
 		return h
 	}},
-	{Header: "TAGS", Extract: func(r any) string { return strings.Join(r.(enclave.Artifact).Tags, ", ") }},
+	{
+		Header: "TAGS",
+		Extract: func(r any) string {
+			a, _ := r.(enclave.Artifact)
+
+			return strings.Join(a.Tags, ", ")
+		},
+	},
 	{Header: "CREATED", Extract: func(r any) string {
-		return r.(enclave.Artifact).CreatedAt.Format("2006-01-02 15:04")
+		a, _ := r.(enclave.Artifact)
+
+		return a.CreatedAt.Format("2006-01-02 15:04")
 	}},
 	{Header: "PULLS", Extract: func(r any) string {
-		return fmt.Sprintf("%d", r.(enclave.Artifact).Pulls)
+		a, _ := r.(enclave.Artifact)
+
+		return strconv.Itoa(a.Pulls)
 	}},
 }

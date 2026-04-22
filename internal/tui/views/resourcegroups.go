@@ -1,15 +1,14 @@
-package views
+package views //nolint:dupl // Bubbletea view models follow identical structure by design.
 
 import (
+	"cli/internal/styles"
 	"context"
-	"fmt"
+	"strconv"
 	"strings"
 
-	"cli/internal/styles"
-
+	"charm.land/lipgloss/v2"
 	"github.com/EnclaveRunner/sdk-go/enclave"
 	tea "github.com/charmbracelet/bubbletea"
-	"charm.land/lipgloss/v2"
 )
 
 // ResourceGroupsLoadedMsg carries loaded resource groups.
@@ -19,6 +18,8 @@ type ResourceGroupsLoadedMsg struct {
 }
 
 // ResourceGroupsModel is the resource groups view.
+//
+
 type ResourceGroupsModel struct {
 	RGs       []enclave.ResourceGroup
 	Cursor    int
@@ -30,9 +31,12 @@ type ResourceGroupsModel struct {
 }
 
 // Load fetches all resource groups.
-func (m ResourceGroupsModel) Load(c *enclave.Client) tea.Cmd {
+func (m ResourceGroupsModel) Load( //nolint:gocritic // hugeParam: Bubbletea requires value receiver.
+	c *enclave.Client,
+) tea.Cmd {
 	return func() tea.Msg {
 		rgs, err := enclave.Collect(c.ListResourceGroups(context.Background()))
+
 		return ResourceGroupsLoadedMsg{RGs: rgs, Err: err}
 	}
 }
@@ -41,7 +45,9 @@ func (m ResourceGroupsModel) Load(c *enclave.Client) tea.Cmd {
 func (m *ResourceGroupsModel) SetSize(w, h int) { m.width = w; m.height = h }
 
 // Update handles messages.
-func (m ResourceGroupsModel) Update(msg tea.Msg) (ResourceGroupsModel, tea.Cmd) {
+func (m ResourceGroupsModel) Update( //nolint:gocritic // hugeParam: Bubbletea requires value receiver.
+	msg tea.Msg,
+) (ResourceGroupsModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case ResourceGroupsLoadedMsg:
 		m.Loading = false
@@ -50,27 +56,28 @@ func (m ResourceGroupsModel) Update(msg tea.Msg) (ResourceGroupsModel, tea.Cmd) 
 		m.Cursor = 0
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "up", "k":
+		case keyUp, keyK:
 			if m.Cursor > 0 {
 				m.Cursor--
 			}
-		case "down", "j":
+		case keyDown, keyJ:
 			if m.Cursor < len(m.RGs)-1 {
 				m.Cursor++
 			}
-		case "left":
+		case keyLeft:
 			if m.colOffset > 0 {
 				m.colOffset--
 			}
-		case "right":
+		case keyRight:
 			m.colOffset++
 		}
 	}
+
 	return m, nil
 }
 
 // View renders the resource groups table.
-func (m ResourceGroupsModel) View() string {
+func (m ResourceGroupsModel) View() string { //nolint:gocritic // hugeParam: Bubbletea requires value receiver.
 	if m.Loading {
 		return styles.MutedStyle.Render("\n  Loading resource groups…")
 	}
@@ -86,7 +93,7 @@ func (m ResourceGroupsModel) View() string {
 
 	rows := make([][]string, len(m.RGs))
 	for i, rg := range m.RGs {
-		count := fmt.Sprintf("%d", len(rg.Endpoints))
+		count := strconv.Itoa(len(rg.Endpoints))
 		rows[i] = []string{rg.Name, count}
 		updateWidth(&colWidths[0], len(rg.Name))
 		updateWidth(&colWidths[1], len(count))
@@ -119,5 +126,6 @@ func (m ResourceGroupsModel) View() string {
 		}
 		b.WriteString(strings.Join(cells[startCol:], "") + "\n")
 	}
+
 	return b.String()
 }

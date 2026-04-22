@@ -1,12 +1,11 @@
 package task
 
 import (
+	"cli/internal/client"
+	"cli/internal/output"
 	"fmt"
 	"os"
 	"time"
-
-	"cli/internal/client"
-	"cli/internal/output"
 
 	"github.com/EnclaveRunner/sdk-go/enclave"
 	"github.com/spf13/cobra"
@@ -19,17 +18,23 @@ func newLogsCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE:  runLogs,
 	}
-	cmd.Flags().String("level", "", "Filter by log level (trace, debug, info, warn, error)")
+	cmd.Flags().
+		String("level", "", "Filter by log level (trace, debug, info, warn, error)")
 	cmd.Flags().String("issuer", "", "Filter by issuer")
 	cmd.Flags().String("since", "", "Include logs after this time (RFC3339)")
 	cmd.Flags().String("until", "", "Include logs before this time (RFC3339)")
+
 	return cmd
 }
 
 func runLogs(cmd *cobra.Command, args []string) error {
 	c := client.FromContext(cmd.Context())
 	cfg := client.ConfigFromContext(cmd.Context())
-	printer := output.New(output.ParseFormat(cfg.Output), output.TaskLogColumns, os.Stdout)
+	printer := output.New(
+		output.ParseFormat(cfg.Output),
+		output.TaskLogColumns,
+		os.Stdout,
+	)
 
 	var opts []enclave.TaskLogOption
 
@@ -70,5 +75,6 @@ func runLogs(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("get task logs: %w", err)
 	}
+
 	return printer.Print(logs)
 }

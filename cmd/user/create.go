@@ -1,11 +1,10 @@
 package user
 
 import (
-	"fmt"
-	"os"
-
 	"cli/internal/client"
 	"cli/internal/output"
+	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 )
@@ -22,11 +21,16 @@ func newCreateCmd() *cobra.Command {
 func runCreate(cmd *cobra.Command, args []string) error {
 	c := client.FromContext(cmd.Context())
 	cfg := client.ConfigFromContext(cmd.Context())
-	printer := output.New(output.ParseFormat(cfg.Output), output.UserColumns, os.Stdout)
+	printer := output.New(
+		output.ParseFormat(cfg.Output),
+		output.UserColumns,
+		os.Stdout,
+	)
 
 	u, err := c.CreateUser(cmd.Context(), args[0], args[2], args[1])
 	if err != nil {
 		return fmt.Errorf("create user: %w", err)
 	}
+
 	return printer.Print([]any{u})
 }
