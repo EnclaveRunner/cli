@@ -28,7 +28,7 @@ type PoliciesModel struct {
 }
 
 // Load fetches all policies.
-func (m PoliciesModel) Load( //nolint:gocritic // hugeParam: Bubbletea requires value receiver.
+func (m PoliciesModel) Load(
 	c *enclave.Client,
 ) tea.Cmd {
 	return func() tea.Msg {
@@ -42,7 +42,7 @@ func (m PoliciesModel) Load( //nolint:gocritic // hugeParam: Bubbletea requires 
 func (m *PoliciesModel) SetSize(w, h int) { m.width = w; m.height = h }
 
 // Update handles messages.
-func (m PoliciesModel) Update( //nolint:gocritic // hugeParam: Bubbletea requires value receiver.
+func (m PoliciesModel) Update(
 	msg tea.Msg,
 ) (PoliciesModel, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -74,7 +74,7 @@ func (m PoliciesModel) Update( //nolint:gocritic // hugeParam: Bubbletea require
 }
 
 // View renders the policies table.
-func (m PoliciesModel) View() string { //nolint:gocritic // hugeParam: Bubbletea requires value receiver.
+func (m PoliciesModel) View() string {
 	if m.Loading {
 		return styles.MutedStyle.Render("\n  Loading policies…")
 	}

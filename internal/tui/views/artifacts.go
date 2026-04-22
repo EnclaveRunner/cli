@@ -33,7 +33,7 @@ type ArtifactsModel struct {
 }
 
 // Load fetches namespaces (level 0).
-func (m ArtifactsModel) Load( //nolint:gocritic // hugeParam: Bubbletea requires value receiver.
+func (m ArtifactsModel) Load(
 	c *enclave.Client,
 ) tea.Cmd {
 	return func() tea.Msg {
@@ -49,7 +49,7 @@ func (m ArtifactsModel) Load( //nolint:gocritic // hugeParam: Bubbletea requires
 func (m *ArtifactsModel) SetSize(w, h int) { m.width = w; m.height = h }
 
 // Update handles messages. Requires client for drill-down navigation.
-func (m ArtifactsModel) Update( //nolint:gocritic // hugeParam: Bubbletea requires value receiver.
+func (m ArtifactsModel) Update(
 	msg tea.Msg,
 	c *enclave.Client,
 ) (ArtifactsModel, tea.Cmd) {
@@ -145,7 +145,7 @@ func (m ArtifactsModel) Update( //nolint:gocritic // hugeParam: Bubbletea requir
 }
 
 // View renders the artifacts drill-down table.
-func (m ArtifactsModel) View() string { //nolint:gocritic // hugeParam: Bubbletea requires value receiver.
+func (m ArtifactsModel) View() string {
 	title := "Namespaces"
 	switch m.level {
 	case 1:

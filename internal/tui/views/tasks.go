@@ -39,7 +39,7 @@ type TasksModel struct {
 }
 
 // Load fetches all tasks asynchronously.
-func (m TasksModel) Load( //nolint:gocritic // hugeParam: Bubbletea value receiver.
+func (m TasksModel) Load(
 	c *enclave.Client,
 ) tea.Cmd {
 	return func() tea.Msg {
@@ -53,7 +53,7 @@ func (m TasksModel) Load( //nolint:gocritic // hugeParam: Bubbletea value receiv
 func (m *TasksModel) SetSize(w, h int) { m.width = w; m.height = h }
 
 // SelectedTask returns the currently highlighted task, or zero value.
-func (m TasksModel) SelectedTask() (enclave.Task, bool) { //nolint:gocritic // hugeParam: Bubbletea requires value receiver.
+func (m TasksModel) SelectedTask() (enclave.Task, bool) {
 	if len(m.Tasks) == 0 || m.Cursor >= len(m.Tasks) {
 		return enclave.Task{}, false
 	}
@@ -62,7 +62,7 @@ func (m TasksModel) SelectedTask() (enclave.Task, bool) { //nolint:gocritic // h
 }
 
 // Update handles messages for the tasks view.
-func (m TasksModel) Update( //nolint:gocritic // hugeParam: Bubbletea value receiver.
+func (m TasksModel) Update(
 	msg tea.Msg,
 ) (TasksModel, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -95,7 +95,7 @@ func (m TasksModel) Update( //nolint:gocritic // hugeParam: Bubbletea value rece
 }
 
 // View renders the tasks table.
-func (m TasksModel) View() string { //nolint:gocritic // hugeParam: Bubbletea requires value receiver.
+func (m TasksModel) View() string {
 	if m.Loading {
 		return styles.MutedStyle.Render("\n  Loading tasks…")
 	}

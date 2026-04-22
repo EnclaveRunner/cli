@@ -28,7 +28,7 @@ type UsersModel struct {
 }
 
 // Load fetches all users.
-func (m UsersModel) Load( //nolint:gocritic // hugeParam: Bubbletea value receiver.
+func (m UsersModel) Load(
 	c *enclave.Client,
 ) tea.Cmd {
 	return func() tea.Msg {
@@ -42,7 +42,7 @@ func (m UsersModel) Load( //nolint:gocritic // hugeParam: Bubbletea value receiv
 func (m *UsersModel) SetSize(w, h int) { m.width = w; m.height = h }
 
 // Update handles messages.
-func (m UsersModel) Update( //nolint:gocritic // hugeParam: Bubbletea value receiver.
+func (m UsersModel) Update(
 	msg tea.Msg,
 ) (UsersModel, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -74,7 +74,7 @@ func (m UsersModel) Update( //nolint:gocritic // hugeParam: Bubbletea value rece
 }
 
 // View renders the users table.
-func (m UsersModel) View() string { //nolint:gocritic // hugeParam: Bubbletea requires value receiver.
+func (m UsersModel) View() string {
 	if m.Loading {
 		return styles.MutedStyle.Render("\n  Loading users…")
 	}

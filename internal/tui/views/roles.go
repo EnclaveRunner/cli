@@ -1,4 +1,4 @@
-package views //nolint:dupl // Bubbletea view models follow identical structure by design.
+package views
 
 import (
 	"cli/internal/styles"
@@ -31,7 +31,7 @@ type RolesModel struct {
 }
 
 // Load fetches all roles.
-func (m RolesModel) Load( //nolint:gocritic // hugeParam: Bubbletea requires value receiver.
+func (m RolesModel) Load(
 	c *enclave.Client,
 ) tea.Cmd {
 	return func() tea.Msg {
@@ -45,7 +45,7 @@ func (m RolesModel) Load( //nolint:gocritic // hugeParam: Bubbletea requires val
 func (m *RolesModel) SetSize(w, h int) { m.width = w; m.height = h }
 
 // Update handles messages.
-func (m RolesModel) Update( //nolint:gocritic // hugeParam: Bubbletea requires value receiver.
+func (m RolesModel) Update(
 	msg tea.Msg,
 ) (RolesModel, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -77,7 +77,7 @@ func (m RolesModel) Update( //nolint:gocritic // hugeParam: Bubbletea requires v
 }
 
 // View renders the roles table.
-func (m RolesModel) View() string { //nolint:gocritic // hugeParam: Bubbletea requires value receiver.
+func (m RolesModel) View() string {
 	if m.Loading {
 		return styles.MutedStyle.Render("\n  Loading roles…")
 	}

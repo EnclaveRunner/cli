@@ -1,4 +1,4 @@
-package views //nolint:dupl // Bubbletea view models follow identical structure by design.
+package views
 
 import (
 	"cli/internal/styles"
@@ -31,7 +31,7 @@ type ResourceGroupsModel struct {
 }
 
 // Load fetches all resource groups.
-func (m ResourceGroupsModel) Load( //nolint:gocritic // hugeParam: Bubbletea requires value receiver.
+func (m ResourceGroupsModel) Load(
 	c *enclave.Client,
 ) tea.Cmd {
 	return func() tea.Msg {
@@ -45,7 +45,7 @@ func (m ResourceGroupsModel) Load( //nolint:gocritic // hugeParam: Bubbletea req
 func (m *ResourceGroupsModel) SetSize(w, h int) { m.width = w; m.height = h }
 
 // Update handles messages.
-func (m ResourceGroupsModel) Update( //nolint:gocritic // hugeParam: Bubbletea requires value receiver.
+func (m ResourceGroupsModel) Update(
 	msg tea.Msg,
 ) (ResourceGroupsModel, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -77,7 +77,7 @@ func (m ResourceGroupsModel) Update( //nolint:gocritic // hugeParam: Bubbletea r
 }
 
 // View renders the resource groups table.
-func (m ResourceGroupsModel) View() string { //nolint:gocritic // hugeParam: Bubbletea requires value receiver.
+func (m ResourceGroupsModel) View() string {
 	if m.Loading {
 		return styles.MutedStyle.Render("\n  Loading resource groups…")
 	}

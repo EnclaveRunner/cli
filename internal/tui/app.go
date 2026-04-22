@@ -51,12 +51,12 @@ func New(c *enclave.Client, apiURL, username, version string) AppModel {
 }
 
 // Init loads initial data (tasks view).
-func (m AppModel) Init() tea.Cmd { //nolint:gocritic // hugeParam: Bubbletea requires value receiver.
+func (m AppModel) Init() tea.Cmd {
 	return m.tasks.Load(m.client)
 }
 
 // Update is the main event loop.
-func (m AppModel) Update( //nolint:gocritic // hugeParam: Bubbletea requires value receiver.
+func (m AppModel) Update(
 	msg tea.Msg,
 ) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -165,7 +165,7 @@ func (m AppModel) Update( //nolint:gocritic // hugeParam: Bubbletea requires val
 }
 
 // View renders the full TUI.
-func (m AppModel) View() string { //nolint:gocritic // hugeParam: Bubbletea requires value receiver.
+func (m AppModel) View() string {
 	if m.width < minWidth || m.height < minHeight {
 		return m.tooSmallView()
 	}
@@ -173,7 +173,7 @@ func (m AppModel) View() string { //nolint:gocritic // hugeParam: Bubbletea requ
 	return m.header.View() + "\n" + m.tabs.View() + "\n" + m.activeContent()
 }
 
-func (m AppModel) tooSmallView() string { //nolint:gocritic // hugeParam: helper called from value-receiver View().
+func (m AppModel) tooSmallView() string {
 	msg := fmt.Sprintf(
 		"Terminal too small (%dx%d). Minimum: %dx%d. Press q to quit.",
 		m.width, m.height, minWidth, minHeight,
@@ -183,7 +183,7 @@ func (m AppModel) tooSmallView() string { //nolint:gocritic // hugeParam: helper
 	return strings.Join(lines, "\n")
 }
 
-func (m AppModel) activeContent() string { //nolint:gocritic // hugeParam: helper called from value-receiver View().
+func (m AppModel) activeContent() string {
 	switch m.activeView {
 	case ViewTasks:
 		return m.tasks.View()
@@ -204,7 +204,7 @@ func (m AppModel) activeContent() string { //nolint:gocritic // hugeParam: helpe
 	return ""
 }
 
-func (m AppModel) switchToView( //nolint:gocritic // hugeParam: returns updated copy per Bubbletea pattern.
+func (m AppModel) switchToView(
 	v View,
 ) (AppModel, tea.Cmd) {
 	m.prevView = m.activeView
@@ -255,7 +255,7 @@ func (m AppModel) switchToView( //nolint:gocritic // hugeParam: returns updated 
 	return m, nil
 }
 
-func (m AppModel) doRefresh() (AppModel, tea.Cmd) { //nolint:gocritic // hugeParam: returns updated copy per Bubbletea pattern.
+func (m AppModel) doRefresh() (AppModel, tea.Cmd) {
 	switch m.activeView {
 	case ViewTasks:
 		m.tasks.Loading = true
@@ -288,7 +288,7 @@ func (m AppModel) doRefresh() (AppModel, tea.Cmd) { //nolint:gocritic // hugePar
 	return m, nil
 }
 
-func (m AppModel) delegateKey( //nolint:gocritic // hugeParam: returns updated copy per Bubbletea pattern.
+func (m AppModel) delegateKey(
 	msg tea.KeyMsg,
 ) (AppModel, tea.Cmd) {
 	switch m.activeView {

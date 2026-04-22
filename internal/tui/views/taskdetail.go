@@ -30,8 +30,8 @@ type TaskDetailModel struct {
 }
 
 // SetTask sets the task to display and starts loading logs.
-func (m TaskDetailModel) SetTask( //nolint:gocritic // hugeParam: Bubbletea requires value receiver.
-	t enclave.Task, //nolint:gocritic // hugeParam: enclave.Task is a value type by design.
+func (m TaskDetailModel) SetTask(
+	t enclave.Task,
 	c *enclave.Client,
 ) (TaskDetailModel, tea.Cmd) {
 	m.task = t
@@ -55,7 +55,7 @@ func (m *TaskDetailModel) SetSize(w, h int) {
 }
 
 // Update handles messages for the task detail view.
-func (m TaskDetailModel) Update( //nolint:gocritic // hugeParam: Bubbletea requires value receiver.
+func (m TaskDetailModel) Update(
 	msg tea.Msg,
 ) (TaskDetailModel, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -75,7 +75,7 @@ func (m TaskDetailModel) Update( //nolint:gocritic // hugeParam: Bubbletea requi
 }
 
 // View renders the task detail pane.
-func (m TaskDetailModel) View() string { //nolint:gocritic // hugeParam: Bubbletea requires value receiver.
+func (m TaskDetailModel) View() string {
 	t := m.task
 
 	field := func(label, value string) string {
@@ -112,7 +112,7 @@ func (m TaskDetailModel) View() string { //nolint:gocritic // hugeParam: Bubblet
 	return b.String()
 }
 
-func (m TaskDetailModel) renderLogs() string { //nolint:gocritic // hugeParam: helper called from value-receiver methods.
+func (m TaskDetailModel) renderLogs() string {
 	if m.err != nil {
 		return styles.ErrorStyle.Render("Error loading logs: " + m.err.Error())
 	}

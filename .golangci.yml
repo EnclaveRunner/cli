@@ -87,14 +87,13 @@ linters:
       config:
         G302: "0644"
         G306: "0644"
-
-issues:
-  exclude-rules:
-    # Bubbletea requires value receivers on model methods; pointer receivers
-    # would break the tea.Model interface contract.
-    - linters: [gocritic]
-      text: "hugeParam"
-      source: "^func \\(m "
-    # View models are intentionally similar in structure (same pattern).
-    - linters: [dupl]
-      path: "tui/views"
+  exclusions:
+    rules:
+      # Bubbletea requires value receivers on model methods; pointer receivers
+      # would break the tea.Model interface contract.
+      - linters: [gocritic]
+        text: "hugeParam"
+        path: "internal/tui"
+      # View models are intentionally similar in structure (same pattern).
+      - linters: [dupl]
+        path: "internal/tui/views"
