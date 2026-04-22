@@ -33,9 +33,13 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
           echo "📝 Updating to version: $VERSION"
 
-          # Update the Version file
+          # Update the Version file (kept for compatibility)
           echo "$VERSION" > Version
           echo "✅ Updated Version file"
+
+          # Also update the CLI version file used by the build
+          echo "$VERSION" > cmd/version.txt
+          echo "✅ Updated cmd/version.txt"
 
           # Search for and update version references in other files
           echo "🔍 Searching for version patterns to update..."
