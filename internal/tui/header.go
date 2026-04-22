@@ -15,34 +15,59 @@ type logoSeg struct {
 }
 
 var (
-	styleCork    = lipgloss.NewStyle().Foreground(styles.ColorWarmHighlight)
-	styleGlass   = lipgloss.NewStyle().Foreground(styles.ColorLogoTeal)
-	stylePlantHi = lipgloss.NewStyle().Foreground(styles.ColorPrimaryGreen)
-	stylePlantLo = lipgloss.NewStyle().Foreground(styles.ColorDarkGreen)
-	styleSoil    = lipgloss.NewStyle().Foreground(styles.ColorSlateDark)
+	styleLogoHi  = lipgloss.NewStyle().Foreground(styles.ColorPrimaryGreen)
+	styleLogoLo  = lipgloss.NewStyle().Foreground(styles.ColorDarkGreen)
+	styleLogoDim = lipgloss.NewStyle().Foreground(styles.ColorSlateDark)
 )
 
 // logoArt defines each line as a slice of colored segments.
-// Total visible width per line: 11 characters.
+// Spells "ENCLAVE" in a compact block-letter ASCII font.
+// Every line renders to exactly 28 visible characters.
+//
+//	█▀▀ █▄ █ █▀▀ █   ▄▀█ █ █ █▀▀
+//	█▀▀ ██ █ █   █   █▄█ █ █ █▀▀
+//	█▄▄ █ ▀█ █▄▄ █▄▄ █▀█ ▀▄▀ █▄▄
 var logoArt = [][]logoSeg{
-	// line 1: cork
-	{{`  ╔═════╗  `, styleCork}},
-	// line 2: jar shoulder with cork pegs
-	{{` ╭`, styleGlass}, {`┴─────┴`, styleCork}, {`╮ `, styleGlass}},
-	// line 3: upper leaves
-	{{`(`, styleGlass}, {` ╲│  │╱  `, stylePlantHi}, {`)`, styleGlass}},
-	// line 4: mid leaves / stem
-	{{`(`, styleGlass}, {`  ╲│ │╱  `, stylePlantHi}, {`)`, styleGlass}},
-	// line 5: converging stem
-	{{`(`, styleGlass}, {`   ╲│╱   `, stylePlantLo}, {`)`, styleGlass}},
-	// line 6: soil
-	{{`(`, styleGlass}, {`▓▓▓▓▓▓▓▓▓`, styleSoil}, {`)`, styleGlass}},
-	// line 7: base
-	{{`╰─────────╯`, styleGlass}},
+	// line 1: blank top spacer
+	{{`                            `, styleLogoDim}},
+	// line 2: blank
+	{{`                            `, styleLogoDim}},
+	// line 3: top third of letters
+	{
+		{`█▀▀ `, styleLogoHi},
+		{`█▄ █ `, styleLogoHi},
+		{`█▀▀ `, styleLogoHi},
+		{`█   `, styleLogoHi},
+		{`▄▀█ `, styleLogoHi},
+		{`█ █ `, styleLogoLo},
+		{`█▀▀`, styleLogoLo},
+	},
+	// line 4: middle third of letters
+	{
+		{`█▀▀ `, styleLogoHi},
+		{`██ █ `, styleLogoHi},
+		{`█   `, styleLogoHi},
+		{`█   `, styleLogoHi},
+		{`█▄█ `, styleLogoHi},
+		{`█ █ `, styleLogoLo},
+		{`█▀▀`, styleLogoLo},
+	},
+	// line 5: bottom third of letters
+	{
+		{`█▄▄ `, styleLogoHi},
+		{`█ ▀█ `, styleLogoHi},
+		{`█▄▄ `, styleLogoHi},
+		{`█▄▄ `, styleLogoHi},
+		{`█▀█ `, styleLogoHi},
+		{`▀▄▀ `, styleLogoLo},
+		{`█▄▄`, styleLogoLo},
+	},
+	// line 6: blank bottom spacer
+	{{`                            `, styleLogoDim}},
 }
 
 // logoWidth is the visible width of each logo line.
-const logoWidth = 11
+const logoWidth = 28
 
 // renderLogoLine renders one logo line (slice of segments) as a single string.
 func renderLogoLine(segs []logoSeg) string {
@@ -55,15 +80,15 @@ func renderLogoLine(segs []logoSeg) string {
 }
 
 // headerContentRows must match len(logoArt).
-const headerContentRows = 7
+const headerContentRows = 9
 
 // headerPanel renders the three-column info panel at the top.
 type headerPanel struct {
-	apiURL   string
-	username string
-	version  string
+	apiURL       string
+	username     string
+	version      string
 	updateNotice string
-	width    int
+	width        int
 }
 
 func newHeaderPanel(apiURL, username, version string) headerPanel {
@@ -87,7 +112,7 @@ func (h headerPanel) View() string {
 		bindColW = 20
 	}
 
-	// Column 1: connection info (7 lines, last 4 blank).
+	// Column 1: connection info (9 lines, last 5 blank).
 	infoLines := []string{
 		styles.MutedStyle.Render(
 			"server  ",
@@ -112,6 +137,7 @@ func (h headerPanel) View() string {
 		"",
 		"",
 		"",
+		"",
 	}
 
 	// Column 2: keybindings.
@@ -124,6 +150,8 @@ func (h headerPanel) View() string {
 		kb("enter", "select    ") + "  " + kb("esc", "back"),
 		kb("←→", "scroll cols") + "  " + kb("r", "refresh"),
 		kb("q", "quit"),
+		"",
+		"",
 		"",
 		"",
 		"",
