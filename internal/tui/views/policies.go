@@ -16,6 +16,14 @@ type PoliciesLoadedMsg struct {
 	Err      error
 }
 
+type policiesMode int
+
+const (
+	policiesModeList  policiesMode = iota
+	policiesModeModal              // d: confirm delete
+	policiesModeForm               // c: create form
+)
+
 // PoliciesModel is the policies list view.
 type PoliciesModel struct {
 	Policies  []enclave.Policy
@@ -25,6 +33,10 @@ type PoliciesModel struct {
 	colOffset int
 	width     int
 	height    int
+
+	mode  policiesMode
+	modal ModalModel
+	form  FormModel
 }
 
 // Load fetches all policies.
@@ -39,18 +51,60 @@ func (m PoliciesModel) Load(
 }
 
 // SetSize updates the rendering area.
-func (m *PoliciesModel) SetSize(w, h int) { m.width = w; m.height = h }
+func (m *PoliciesModel) SetSize(w, h int) {
+	m.width = w
+	m.height = h
+	m.modal.SetSize(w, h)
+	m.form.SetSize(w, h)
+}
+
+// IsCapturing reports whether the view is in a mode that owns the keyboard.
+func (m PoliciesModel) IsCapturing() bool {
+	return m.mode != policiesModeList
+}
+
+func (m PoliciesModel) selectedPolicy() (enclave.Policy, bool) {
+	if len(m.Policies) == 0 || m.Cursor >= len(m.Policies) {
+		return enclave.Policy{}, false
+	}
+
+	return m.Policies[m.Cursor], true
+}
 
 // Update handles messages.
 func (m PoliciesModel) Update(
 	msg tea.Msg,
 ) (PoliciesModel, tea.Cmd) {
+	switch m.mode {
+	case policiesModeModal:
+		return m.updateModal(msg)
+	case policiesModeForm:
+		return m.updateForm(msg)
+	}
+
+	return m.updateList(msg)
+}
+
+func (m PoliciesModel) updateList(msg tea.Msg) (PoliciesModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case PoliciesLoadedMsg:
 		m.Loading = false
 		m.Err = msg.Err
 		m.Policies = msg.Policies
 		m.Cursor = 0
+
+	case PolicyDeletedMsg:
+		m.Loading = false
+		if msg.Err != nil {
+			m.Err = msg.Err
+		}
+
+	case PolicyCreatedMsg:
+		m.Loading = false
+		if msg.Err != nil {
+			m.Err = msg.Err
+		}
+
 	case tea.KeyMsg:
 		switch msg.String() {
 		case keyUp, keyK:
@@ -67,14 +121,98 @@ func (m PoliciesModel) Update(
 			}
 		case keyRight:
 			m.colOffset++
+
+		case "d":
+			if p, ok := m.selectedPolicy(); ok {
+				label := p.Role + " / " + p.ResourceGroup + " / " + string(p.Method)
+				m.modal = NewModal("Delete policy \"" + label + "\"?")
+				m.modal.SetSize(m.width, m.height)
+				m.mode = policiesModeModal
+			}
+
+		case "c":
+			m.form = NewForm("Create Policy", []FormField{
+				{Label: "Role", Placeholder: "admin"},
+				{Label: "Resource Group", Placeholder: "my-api"},
+				{Label: "Method", Placeholder: "GET, POST, PUT, DELETE, *"},
+			})
+			m.form.SetSize(m.width, m.height)
+			m.mode = policiesModeForm
 		}
 	}
 
 	return m, nil
 }
 
-// View renders the policies table.
+func (m PoliciesModel) updateModal(msg tea.Msg) (PoliciesModel, tea.Cmd) {
+	switch msg.(type) {
+	case ModalConfirmedMsg:
+		if p, ok := m.selectedPolicy(); ok {
+			m.mode = policiesModeList
+			m.Loading = true
+			policy := p
+
+			return m, func() tea.Msg { return FormDeletePolicyMsg{Policy: policy} }
+		}
+		m.mode = policiesModeList
+
+	case ModalCancelledMsg:
+		m.mode = policiesModeList
+
+	default:
+		var cmd tea.Cmd
+		m.modal, cmd = m.modal.Update(msg)
+
+		return m, cmd
+	}
+
+	return m, nil
+}
+
+func (m PoliciesModel) updateForm(msg tea.Msg) (PoliciesModel, tea.Cmd) {
+	switch msg := msg.(type) {
+	case FormSubmittedMsg:
+		if len(msg.Values) >= 3 {
+			role, rg, method := msg.Values[0], msg.Values[1], msg.Values[2]
+			if role == "" || rg == "" || method == "" {
+				m.form.SetError("role, resource group, and method are required")
+
+				return m, nil
+			}
+			m.mode = policiesModeList
+
+			return m, func() tea.Msg {
+				return FormCreatePolicyMsg{Role: role, ResourceGroup: rg, Method: method}
+			}
+		}
+		m.mode = policiesModeList
+
+	case FormCancelledMsg:
+		m.mode = policiesModeList
+
+	default:
+		var cmd tea.Cmd
+		m.form, cmd = m.form.Update(msg)
+
+		return m, cmd
+	}
+
+	return m, nil
+}
+
+// View renders the policies table or the active overlay.
 func (m PoliciesModel) View() string {
+	switch m.mode {
+	case policiesModeModal:
+		return m.renderList() + m.modal.View()
+	case policiesModeForm:
+		return m.form.View()
+	}
+
+	return m.renderList()
+}
+
+func (m PoliciesModel) renderList() string {
 	if m.Loading {
 		return styles.MutedStyle.Render("\n  Loading policies…")
 	}
@@ -126,4 +264,14 @@ func (m PoliciesModel) View() string {
 	}
 
 	return b.String()
+}
+
+// FormDeletePolicyMsg requests an async policy delete in app.go.
+type FormDeletePolicyMsg struct{ Policy enclave.Policy }
+
+// FormCreatePolicyMsg requests an async policy create in app.go.
+type FormCreatePolicyMsg struct {
+	Role          string
+	ResourceGroup string
+	Method        string
 }

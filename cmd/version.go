@@ -1,31 +1,27 @@
 package cmd
 
 import (
-	_ "embed"
 	"fmt"
-	"strings"
 
 	iv "cli/internal/version"
 
 	"github.com/spf13/cobra"
 )
 
-//go:embed version.txt
-var versionFile string
+var appVersion string
 
 func newVersionCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "version",
 		Short: "Print the encl version",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			local := strings.TrimSpace(versionFile)
-			_, err := fmt.Fprintln(cmd.OutOrStdout(), local)
+			_, err := fmt.Fprintln(cmd.OutOrStdout(), appVersion)
 			if err != nil {
 				return err
 			}
 
 			// Check remote version (best-effort)
-			remote, newer, err := iv.CheckRemote(local)
+			remote, newer, err := iv.CheckRemote(appVersion)
 			if err == nil && newer {
 				_, _ = fmt.Fprintln(cmd.OutOrStdout(), "New version available:", remote)
 			}

@@ -21,53 +21,52 @@ var (
 )
 
 // logoArt defines each line as a slice of colored segments.
-// Spells "ENCLAVE" in a compact block-letter ASCII font.
-// Every line renders to exactly 28 visible characters.
+// Spells "ENCL" in a compact ASCII font.
+// Every line renders to exactly 23 visible characters.
 //
-//	█▀▀ █▄ █ █▀▀ █   ▄▀█ █ █ █▀▀
-//	█▀▀ ██ █ █   █   █▄█ █ █ █▀▀
-//	█▄▄ █ ▀█ █▄▄ █▄▄ █▀█ ▀▄▀ █▄▄
+//	 ____  _  _  ___  __
+//	( ___)( \( )/ __)(  )
+//	 )__)  )  (( (__  )(__
+//	(____)(_)\_)\___)(____)
 var logoArt = [][]logoSeg{
 	// line 1: blank top spacer
-	{{`                            `, styleLogoDim}},
+	{{`                       `, styleLogoDim}},
 	// line 2: blank
-	{{`                            `, styleLogoDim}},
-	// line 3: top third of letters
+	{{`                       `, styleLogoDim}},
+	// line 3
 	{
-		{`█▀▀ `, styleLogoHi},
-		{`█▄ █ `, styleLogoHi},
-		{`█▀▀ `, styleLogoHi},
-		{`█   `, styleLogoHi},
-		{`▄▀█ `, styleLogoHi},
-		{`█ █ `, styleLogoLo},
-		{`█▀▀`, styleLogoLo},
+		{` `, styleLogoDim},
+		{`____  _  _  ___  __   `, styleLogoHi},
 	},
-	// line 4: middle third of letters
+	// line 4
 	{
-		{`█▀▀ `, styleLogoHi},
-		{`██ █ `, styleLogoHi},
-		{`█   `, styleLogoHi},
-		{`█   `, styleLogoHi},
-		{`█▄█ `, styleLogoHi},
-		{`█ █ `, styleLogoLo},
-		{`█▀▀`, styleLogoLo},
+		{`( `, styleLogoLo},
+		{`___)`, styleLogoHi},
+		{`( \( )/ __)(  )  `, styleLogoHi},
 	},
-	// line 5: bottom third of letters
+	// line 5
 	{
-		{`█▄▄ `, styleLogoHi},
-		{`█ ▀█ `, styleLogoHi},
-		{`█▄▄ `, styleLogoHi},
-		{`█▄▄ `, styleLogoHi},
-		{`█▀█ `, styleLogoHi},
-		{`▀▄▀ `, styleLogoLo},
-		{`█▄▄`, styleLogoLo},
+		{` `, styleLogoDim},
+		{`  )__)  )  (( (__  )`, styleLogoHi},
+		{`(__  `, styleLogoLo},
 	},
-	// line 6: blank bottom spacer
-	{{`                            `, styleLogoDim}},
+	// line 6
+	{
+		{`(`, styleLogoLo},
+		{`____)`, styleLogoHi},
+		{`(_)\_)\___)`, styleLogoHi},
+		{`(____)`, styleLogoLo},
+	},
+	// line 7: blank bottom spacer
+	{{`                       `, styleLogoDim}},
+	// line 8: blank
+	{{`                       `, styleLogoDim}},
+	// line 9: blank
+	{{`                       `, styleLogoDim}},
 }
 
 // logoWidth is the visible width of each logo line.
-const logoWidth = 28
+const logoWidth = 23
 
 // renderLogoLine renders one logo line (slice of segments) as a single string.
 func renderLogoLine(segs []logoSeg) string {
@@ -149,8 +148,8 @@ func (h headerPanel) View() string {
 		kb("1-6", "switch view") + "  " + kb("↑↓/jk", "navigate"),
 		kb("enter", "select    ") + "  " + kb("esc", "back"),
 		kb("←→", "scroll cols") + "  " + kb("r", "refresh"),
+		kb("c", "create     ") + "  " + kb("d", "delete"),
 		kb("q", "quit"),
-		"",
 		"",
 		"",
 		"",

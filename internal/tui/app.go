@@ -3,6 +3,7 @@ package tui
 import (
 	"cli/internal/styles"
 	"cli/internal/tui/views"
+	"context"
 	"fmt"
 	"strings"
 
@@ -109,6 +110,7 @@ func (m AppModel) Update(
 
 		return m, nil
 
+	// --- data loaded ---
 	case views.TasksLoadedMsg:
 		m.tasks, _ = m.tasks.Update(msg)
 	case views.UsersLoadedMsg:
@@ -124,16 +126,96 @@ func (m AppModel) Update(
 	case views.TaskLogsLoadedMsg:
 		m.taskDetail, _ = m.taskDetail.Update(msg)
 
+	// --- form/modal lifecycle routed to active view ---
+	case views.FormSubmittedMsg, views.FormCancelledMsg,
+		views.ModalConfirmedMsg, views.ModalCancelledMsg:
+		return m.delegateMsg(msg)
+
+	// --- user operations ---
+	case views.FormCreateUserMsg:
+		return m, m.createUserCmd(msg.Name, msg.Display, msg.Pass)
+	case views.UserCreatedMsg:
+		m.users, _ = m.users.Update(msg)
+		if msg.Err == nil {
+			m.users.Loading = true
+			return m, m.users.Load(m.client)
+		}
+
+	// --- role operations ---
+	case views.FormDeleteRoleMsg:
+		return m, m.deleteRoleCmd(msg.Name)
+	case views.FormCreateRoleMsg:
+		return m, m.createRoleCmd(msg.Name, msg.UsersRaw)
+	case views.RoleDeletedMsg:
+		m.roles, _ = m.roles.Update(msg)
+		if msg.Err == nil {
+			m.roles.Loading = true
+			return m, m.roles.Load(m.client)
+		}
+	case views.RoleCreatedMsg:
+		m.roles, _ = m.roles.Update(msg)
+		if msg.Err == nil {
+			m.roles.Loading = true
+			return m, m.roles.Load(m.client)
+		}
+
+	// --- resource group operations ---
+	case views.FormDeleteRGMsg:
+		return m, m.deleteRGCmd(msg.Name)
+	case views.FormCreateRGMsg:
+		return m, m.createRGCmd(msg.Name, msg.EndpointsRaw)
+	case views.ResourceGroupDeletedMsg:
+		m.resourceGroups, _ = m.resourceGroups.Update(msg)
+		if msg.Err == nil {
+			m.resourceGroups.Loading = true
+			return m, m.resourceGroups.Load(m.client)
+		}
+	case views.ResourceGroupCreatedMsg:
+		m.resourceGroups, _ = m.resourceGroups.Update(msg)
+		if msg.Err == nil {
+			m.resourceGroups.Loading = true
+			return m, m.resourceGroups.Load(m.client)
+		}
+
+	// --- policy operations ---
+	case views.FormDeletePolicyMsg:
+		return m, m.deletePolicyCmd(msg.Policy)
+	case views.FormCreatePolicyMsg:
+		return m, m.createPolicyCmd(msg.Role, msg.ResourceGroup, msg.Method)
+	case views.PolicyDeletedMsg:
+		m.policies, _ = m.policies.Update(msg)
+		if msg.Err == nil {
+			m.policies.Loading = true
+			return m, m.policies.Load(m.client)
+		}
+	case views.PolicyCreatedMsg:
+		m.policies, _ = m.policies.Update(msg)
+		if msg.Err == nil {
+			m.policies.Loading = true
+			return m, m.policies.Load(m.client)
+		}
+
 	case tea.KeyMsg:
 		// Always allow quit.
 		switch msg.String() {
-		case "q", "ctrl+c":
+		case "ctrl+c":
 			return m, tea.Quit
 		}
 
 		// Ignore all other input when terminal is too small.
 		if m.width < minWidth || m.height < minHeight {
 			return m, nil
+		}
+
+		// When a sub-view is capturing input (form/modal/describe), delegate
+		// everything directly so global hotkeys don't interfere.
+		if m.isCapturing() {
+			return m.delegateKey(msg)
+		}
+
+		// "q" only quits from top-level list views, not inside sub-views.
+		if msg.String() == "q" {
+			return m, tea.Quit
 		}
 
 		switch msg.String() {
@@ -317,20 +399,53 @@ func (m AppModel) doRefresh() (AppModel, tea.Cmd) {
 	return m, nil
 }
 
+func (m AppModel) isCapturing() bool {
+	switch m.activeView {
+	case ViewUsers:
+		return m.users.IsCapturing()
+	case ViewRoles:
+		return m.roles.IsCapturing()
+	case ViewResourceGroups:
+		return m.resourceGroups.IsCapturing()
+	case ViewPolicies:
+		return m.policies.IsCapturing()
+	}
+
+	return false
+}
+
 func (m AppModel) delegateKey(
 	msg tea.KeyMsg,
+) (AppModel, tea.Cmd) {
+	return m.delegateMsg(msg)
+}
+
+func (m AppModel) delegateMsg(
+	msg tea.Msg,
 ) (AppModel, tea.Cmd) {
 	switch m.activeView {
 	case ViewTasks:
 		m.tasks, _ = m.tasks.Update(msg)
 	case ViewUsers:
-		m.users, _ = m.users.Update(msg)
+		var cmd tea.Cmd
+		m.users, cmd = m.users.Update(msg)
+
+		return m, cmd
 	case ViewRoles:
-		m.roles, _ = m.roles.Update(msg)
+		var cmd tea.Cmd
+		m.roles, cmd = m.roles.Update(msg)
+
+		return m, cmd
 	case ViewResourceGroups:
-		m.resourceGroups, _ = m.resourceGroups.Update(msg)
+		var cmd tea.Cmd
+		m.resourceGroups, cmd = m.resourceGroups.Update(msg)
+
+		return m, cmd
 	case ViewPolicies:
-		m.policies, _ = m.policies.Update(msg)
+		var cmd tea.Cmd
+		m.policies, cmd = m.policies.Update(msg)
+
+		return m, cmd
 	case ViewArtifacts:
 		var cmd tea.Cmd
 		m.artifacts, cmd = m.artifacts.Update(msg, m.client)
@@ -341,4 +456,100 @@ func (m AppModel) delegateKey(
 	}
 
 	return m, nil
+}
+
+// --- async API helpers ---
+
+func (m AppModel) createUserCmd(name, display, pass string) tea.Cmd {
+	c := m.client
+
+	return func() tea.Msg {
+		_, err := c.CreateUser(context.Background(), name, pass, display)
+
+		return views.UserCreatedMsg{Err: err}
+	}
+}
+
+func (m AppModel) deleteRoleCmd(name string) tea.Cmd {
+	c := m.client
+
+	return func() tea.Msg {
+		_, err := c.DeleteRole(context.Background(), name)
+
+		return views.RoleDeletedMsg{Err: err}
+	}
+}
+
+func (m AppModel) createRoleCmd(name, usersRaw string) tea.Cmd {
+	c := m.client
+	users := splitTrim(usersRaw)
+
+	return func() tea.Msg {
+		_, err := c.CreateRole(context.Background(), name, users)
+
+		return views.RoleCreatedMsg{Err: err}
+	}
+}
+
+func (m AppModel) deleteRGCmd(name string) tea.Cmd {
+	c := m.client
+
+	return func() tea.Msg {
+		_, err := c.DeleteResourceGroup(context.Background(), name)
+
+		return views.ResourceGroupDeletedMsg{Err: err}
+	}
+}
+
+func (m AppModel) createRGCmd(name, endpointsRaw string) tea.Cmd {
+	c := m.client
+	endpoints := splitTrim(endpointsRaw)
+
+	return func() tea.Msg {
+		_, err := c.CreateResourceGroup(context.Background(), name, endpoints)
+
+		return views.ResourceGroupCreatedMsg{Err: err}
+	}
+}
+
+func (m AppModel) deletePolicyCmd(p enclave.Policy) tea.Cmd {
+	c := m.client
+
+	return func() tea.Msg {
+		err := c.DeletePolicy(context.Background(), p)
+
+		return views.PolicyDeletedMsg{Err: err}
+	}
+}
+
+func (m AppModel) createPolicyCmd(role, rg, method string) tea.Cmd {
+	c := m.client
+	p := enclave.Policy{
+		Role:          role,
+		ResourceGroup: rg,
+		Method:        enclave.PolicyMethod(method),
+	}
+
+	return func() tea.Msg {
+		err := c.CreatePolicy(context.Background(), p)
+
+		return views.PolicyCreatedMsg{Err: err}
+	}
+}
+
+// splitTrim splits a comma-separated string and trims whitespace from each part.
+func splitTrim(s string) []string {
+	if s == "" {
+		return nil
+	}
+	parts := strings.Split(s, ",")
+	result := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			result = append(result, p)
+		}
+	}
+
+	return result
 }

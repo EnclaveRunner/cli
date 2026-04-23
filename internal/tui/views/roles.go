@@ -17,9 +17,16 @@ type RolesLoadedMsg struct {
 	Err   error
 }
 
-// RolesModel is the roles list view.
-//
+type rolesMode int
 
+const (
+	rolesModeList     rolesMode = iota
+	rolesModeDescribe           // enter: full detail
+	rolesModeModal              // d: confirm delete
+	rolesModeForm               // c: create form
+)
+
+// RolesModel is the roles list view.
 type RolesModel struct {
 	Roles     []enclave.Role
 	Cursor    int
@@ -28,6 +35,10 @@ type RolesModel struct {
 	colOffset int
 	width     int
 	height    int
+
+	mode  rolesMode
+	modal ModalModel
+	form  FormModel
 }
 
 // Load fetches all roles.
@@ -42,18 +53,62 @@ func (m RolesModel) Load(
 }
 
 // SetSize updates the rendering area.
-func (m *RolesModel) SetSize(w, h int) { m.width = w; m.height = h }
+func (m *RolesModel) SetSize(w, h int) {
+	m.width = w
+	m.height = h
+	m.modal.SetSize(w, h)
+	m.form.SetSize(w, h)
+}
+
+// IsCapturing reports whether the view is in a mode that owns the keyboard.
+func (m RolesModel) IsCapturing() bool {
+	return m.mode != rolesModeList
+}
+
+func (m RolesModel) selectedRole() (enclave.Role, bool) {
+	if len(m.Roles) == 0 || m.Cursor >= len(m.Roles) {
+		return enclave.Role{}, false
+	}
+
+	return m.Roles[m.Cursor], true
+}
 
 // Update handles messages.
 func (m RolesModel) Update(
 	msg tea.Msg,
 ) (RolesModel, tea.Cmd) {
+	switch m.mode {
+	case rolesModeModal:
+		return m.updateModal(msg)
+	case rolesModeForm:
+		return m.updateForm(msg)
+	case rolesModeDescribe:
+		return m.updateDescribe(msg)
+	}
+
+	return m.updateList(msg)
+}
+
+func (m RolesModel) updateList(msg tea.Msg) (RolesModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case RolesLoadedMsg:
 		m.Loading = false
 		m.Err = msg.Err
 		m.Roles = msg.Roles
 		m.Cursor = 0
+
+	case RoleDeletedMsg:
+		m.Loading = false
+		if msg.Err != nil {
+			m.Err = msg.Err
+		}
+
+	case RoleCreatedMsg:
+		m.Loading = false
+		if msg.Err != nil {
+			m.Err = msg.Err
+		}
+
 	case tea.KeyMsg:
 		switch msg.String() {
 		case keyUp, keyK:
@@ -70,14 +125,116 @@ func (m RolesModel) Update(
 			}
 		case keyRight:
 			m.colOffset++
+
+		case "enter":
+			if _, ok := m.selectedRole(); ok {
+				m.mode = rolesModeDescribe
+			}
+
+		case "d":
+			if r, ok := m.selectedRole(); ok {
+				m.modal = NewModal("Delete role \"" + r.Name + "\"?")
+				m.modal.SetSize(m.width, m.height)
+				m.mode = rolesModeModal
+			}
+
+		case "c":
+			m.form = NewForm("Create Role", []FormField{
+				{Label: "Name", Placeholder: "admin"},
+				{Label: "Users (comma-sep)", Placeholder: "alice, bob"},
+			})
+			m.form.SetSize(m.width, m.height)
+			m.mode = rolesModeForm
 		}
 	}
 
 	return m, nil
 }
 
-// View renders the roles table.
+func (m RolesModel) updateModal(msg tea.Msg) (RolesModel, tea.Cmd) {
+	switch msg.(type) {
+	case ModalConfirmedMsg:
+		if r, ok := m.selectedRole(); ok {
+			m.mode = rolesModeList
+			m.Loading = true
+			name := r.Name
+
+			return m, func() tea.Msg { return FormDeleteRoleMsg{Name: name} }
+		}
+		m.mode = rolesModeList
+
+	case ModalCancelledMsg:
+		m.mode = rolesModeList
+
+	default:
+		var cmd tea.Cmd
+		m.modal, cmd = m.modal.Update(msg)
+
+		return m, cmd
+	}
+
+	return m, nil
+}
+
+func (m RolesModel) updateForm(msg tea.Msg) (RolesModel, tea.Cmd) {
+	switch msg := msg.(type) {
+	case FormSubmittedMsg:
+		if len(msg.Values) >= 1 {
+			name := msg.Values[0]
+			if name == "" {
+				m.form.SetError("name is required")
+
+				return m, nil
+			}
+			usersRaw := ""
+			if len(msg.Values) >= 2 {
+				usersRaw = msg.Values[1]
+			}
+			m.mode = rolesModeList
+
+			return m, func() tea.Msg { return FormCreateRoleMsg{Name: name, UsersRaw: usersRaw} }
+		}
+		m.mode = rolesModeList
+
+	case FormCancelledMsg:
+		m.mode = rolesModeList
+
+	default:
+		var cmd tea.Cmd
+		m.form, cmd = m.form.Update(msg)
+
+		return m, cmd
+	}
+
+	return m, nil
+}
+
+func (m RolesModel) updateDescribe(msg tea.Msg) (RolesModel, tea.Cmd) {
+	if key, ok := msg.(tea.KeyMsg); ok {
+		switch key.String() {
+		case "esc", "q":
+			m.mode = rolesModeList
+		}
+	}
+
+	return m, nil
+}
+
+// View renders the roles table or the active overlay.
 func (m RolesModel) View() string {
+	switch m.mode {
+	case rolesModeDescribe:
+		return m.renderDescribe()
+	case rolesModeModal:
+		return m.renderList() + m.modal.View()
+	case rolesModeForm:
+		return m.form.View()
+	}
+
+	return m.renderList()
+}
+
+func (m RolesModel) renderList() string {
 	if m.Loading {
 		return styles.MutedStyle.Render("\n  Loading roles…")
 	}
@@ -128,4 +285,39 @@ func (m RolesModel) View() string {
 	}
 
 	return b.String()
+}
+
+func (m RolesModel) renderDescribe() string {
+	r, ok := m.selectedRole()
+	if !ok {
+		return styles.MutedStyle.Render("\n  No role selected.")
+	}
+
+	field := func(label, value string) string {
+		return styles.MutedStyle.Render(label+": ") + value
+	}
+
+	var b strings.Builder
+	b.WriteString("\n")
+	b.WriteString(styles.TitleStyle.Render("Role "+r.Name) + "\n\n")
+	b.WriteString(field("Name", r.Name) + "\n")
+	b.WriteString(field("User count", strconv.Itoa(len(r.Users))) + "\n")
+
+	if len(r.Users) > 0 {
+		b.WriteString(field("Users", strings.Join(r.Users, ", ")) + "\n")
+	}
+
+	b.WriteString("\n" + styles.HelpKeyStyle.Render("esc") +
+		lipgloss.NewStyle().Foreground(styles.ColorSlateDark).Render(" back"))
+
+	return b.String()
+}
+
+// FormDeleteRoleMsg requests an async role delete in app.go.
+type FormDeleteRoleMsg struct{ Name string }
+
+// FormCreateRoleMsg requests an async role create in app.go.
+type FormCreateRoleMsg struct {
+	Name     string
+	UsersRaw string // comma-separated user list
 }

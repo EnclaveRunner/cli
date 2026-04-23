@@ -12,7 +12,6 @@ import (
 	"cli/internal/tui"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -69,7 +68,7 @@ var rootCmd = &cobra.Command{
 				c,
 				cfg.APIURL,
 				cfg.Username,
-				strings.TrimSpace(versionFile),
+				appVersion,
 			)
 		}
 
@@ -78,7 +77,8 @@ var rootCmd = &cobra.Command{
 }
 
 // Execute is the entry point called from main.
-func Execute() {
+func Execute(version string) {
+	appVersion = version
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}
