@@ -159,14 +159,9 @@ func (m UsersModel) updateModal(msg tea.Msg) (UsersModel, tea.Cmd) {
 		if u, ok := m.selectedUser(); ok {
 			m.mode = usersModeList
 			m.Loading = true
+			name := u.Name
 
-			return m, func() tea.Msg {
-				// NOTE: enclave SDK DeleteUser returns the deleted user or an error.
-				// We ignore the returned user value here.
-				_, err := m.deleteUser(u.Name)
-
-				return UserDeletedMsg{Err: err}
-			}
+			return m, func() tea.Msg { return FormDeleteUserMsg{Name: name} }
 		}
 		m.mode = usersModeList
 
@@ -181,15 +176,6 @@ func (m UsersModel) updateModal(msg tea.Msg) (UsersModel, tea.Cmd) {
 	}
 
 	return m, nil
-}
-
-// deleteUser is a helper closure used inside the async cmd.
-// It captures nothing from m — only the name is needed.
-func (m UsersModel) deleteUser(name string) (enclave.User, error) {
-	// This is called inside a tea.Cmd closure; the client is not stored on the
-	// model, so we return a sentinel that tells the caller to re-load.
-	// The actual API call is injected via DeleteUserCmd.
-	return enclave.User{}, nil
 }
 
 func (m UsersModel) updateForm(msg tea.Msg) (UsersModel, tea.Cmd) {

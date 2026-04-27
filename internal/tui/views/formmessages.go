@@ -14,6 +14,9 @@ type FormSubmittedMsg struct {
 // FormCancelledMsg is sent when the user cancels a form.
 type FormCancelledMsg struct{}
 
+// FormDeleteUserMsg is sent from the modal to trigger an async user delete.
+type FormDeleteUserMsg struct{ Name string }
+
 // UserDeletedMsg is sent after a user delete operation completes.
 type UserDeletedMsg struct{ Err error }
 

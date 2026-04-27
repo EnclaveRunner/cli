@@ -132,8 +132,16 @@ func (m AppModel) Update(
 		return m.delegateMsg(msg)
 
 	// --- user operations ---
+	case views.FormDeleteUserMsg:
+		return m, m.deleteUserCmd(msg.Name)
 	case views.FormCreateUserMsg:
 		return m, m.createUserCmd(msg.Name, msg.Display, msg.Pass)
+	case views.UserDeletedMsg:
+		m.users, _ = m.users.Update(msg)
+		if msg.Err == nil {
+			m.users.Loading = true
+			return m, m.users.Load(m.client)
+		}
 	case views.UserCreatedMsg:
 		m.users, _ = m.users.Update(msg)
 		if msg.Err == nil {
@@ -459,6 +467,16 @@ func (m AppModel) delegateMsg(
 }
 
 // --- async API helpers ---
+
+func (m AppModel) deleteUserCmd(name string) tea.Cmd {
+	c := m.client
+
+	return func() tea.Msg {
+		_, err := c.DeleteUser(context.Background(), name)
+
+		return views.UserDeletedMsg{Err: err}
+	}
+}
 
 func (m AppModel) createUserCmd(name, display, pass string) tea.Cmd {
 	c := m.client
