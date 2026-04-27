@@ -129,7 +129,7 @@ func (h headerPanel) View() string {
 			Foreground(styles.ColorSlateLight).
 			Render(h.version),
 		// If an update notice is present, show it below the version line.
-		styles.MutedStyle.Render("          ") + lipgloss.NewStyle().
+		styles.MutedStyle.Render("update  ") + lipgloss.NewStyle().
 			Foreground(styles.ColorPrimaryGreen).
 			Render(h.updateNotice),
 		"",

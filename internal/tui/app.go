@@ -86,7 +86,7 @@ func (m AppModel) Update(
 
 	case versionCheckedMsg:
 		if msg.Newer {
-			m.header.updateNotice = fmt.Sprintf("⚡️ %s (latest)", msg.Remote)
+			m.header.updateNotice = fmt.Sprintf("⚡️ %s available", msg.Remote)
 		}
 
 		return m, nil
