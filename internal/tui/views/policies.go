@@ -63,14 +63,6 @@ func (m PoliciesModel) IsCapturing() bool {
 	return m.mode != policiesModeList
 }
 
-func (m PoliciesModel) selectedPolicy() (enclave.Policy, bool) {
-	if len(m.Policies) == 0 || m.Cursor >= len(m.Policies) {
-		return enclave.Policy{}, false
-	}
-
-	return m.Policies[m.Cursor], true
-}
-
 // Update handles messages.
 func (m PoliciesModel) Update(
 	msg tea.Msg,
@@ -80,9 +72,33 @@ func (m PoliciesModel) Update(
 		return m.updateModal(msg)
 	case policiesModeForm:
 		return m.updateForm(msg)
+	case policiesModeList:
+		return m.updateList(msg)
 	}
 
 	return m.updateList(msg)
+}
+
+// View renders the policies table or the active overlay.
+func (m PoliciesModel) View() string {
+	switch m.mode {
+	case policiesModeModal:
+		return m.renderList() + m.modal.View()
+	case policiesModeForm:
+		return m.form.View()
+	case policiesModeList:
+		return m.renderList()
+	}
+
+	return m.renderList()
+}
+
+func (m PoliciesModel) selectedPolicy() (enclave.Policy, bool) {
+	if len(m.Policies) == 0 || m.Cursor >= len(m.Policies) {
+		return enclave.Policy{}, false
+	}
+
+	return m.Policies[m.Cursor], true
 }
 
 func (m PoliciesModel) updateList(msg tea.Msg) (PoliciesModel, tea.Cmd) {
@@ -182,7 +198,11 @@ func (m PoliciesModel) updateForm(msg tea.Msg) (PoliciesModel, tea.Cmd) {
 			m.mode = policiesModeList
 
 			return m, func() tea.Msg {
-				return FormCreatePolicyMsg{Role: role, ResourceGroup: rg, Method: method}
+				return FormCreatePolicyMsg{
+					Role:          role,
+					ResourceGroup: rg,
+					Method:        method,
+				}
 			}
 		}
 		m.mode = policiesModeList
@@ -198,18 +218,6 @@ func (m PoliciesModel) updateForm(msg tea.Msg) (PoliciesModel, tea.Cmd) {
 	}
 
 	return m, nil
-}
-
-// View renders the policies table or the active overlay.
-func (m PoliciesModel) View() string {
-	switch m.mode {
-	case policiesModeModal:
-		return m.renderList() + m.modal.View()
-	case policiesModeForm:
-		return m.form.View()
-	}
-
-	return m.renderList()
 }
 
 func (m PoliciesModel) renderList() string {

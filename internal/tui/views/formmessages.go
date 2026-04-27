@@ -29,10 +29,12 @@ type RoleDeletedMsg struct{ Err error }
 // RoleCreatedMsg is sent after a role create operation completes.
 type RoleCreatedMsg struct{ Err error }
 
-// ResourceGroupDeletedMsg is sent after a resource group delete operation completes.
+// ResourceGroupDeletedMsg is sent after a resource group delete operation
+// completes.
 type ResourceGroupDeletedMsg struct{ Err error }
 
-// ResourceGroupCreatedMsg is sent after a resource group create operation completes.
+// ResourceGroupCreatedMsg is sent after a resource group create operation
+// completes.
 type ResourceGroupCreatedMsg struct{ Err error }
 
 // PolicyDeletedMsg is sent after a policy delete operation completes.

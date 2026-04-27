@@ -65,15 +65,6 @@ func (m UsersModel) IsCapturing() bool {
 	return m.mode != usersModeList
 }
 
-// selectedUser returns the user at the current cursor, if any.
-func (m UsersModel) selectedUser() (enclave.User, bool) {
-	if len(m.Users) == 0 || m.Cursor >= len(m.Users) {
-		return enclave.User{}, false
-	}
-
-	return m.Users[m.Cursor], true
-}
-
 // Update handles messages.
 func (m UsersModel) Update(
 	msg tea.Msg,
@@ -85,9 +76,36 @@ func (m UsersModel) Update(
 		return m.updateForm(msg)
 	case usersModeDescribe:
 		return m.updateDescribe(msg)
+	case usersModeList:
+		return m.updateList(msg)
 	}
 
 	return m.updateList(msg)
+}
+
+// View renders the users table or the active overlay.
+func (m UsersModel) View() string {
+	switch m.mode {
+	case usersModeDescribe:
+		return m.renderDescribe()
+	case usersModeModal:
+		return m.renderList() + m.modal.View()
+	case usersModeForm:
+		return m.form.View()
+	case usersModeList:
+		return m.renderList()
+	}
+
+	return m.renderList()
+}
+
+// selectedUser returns the user at the current cursor, if any.
+func (m UsersModel) selectedUser() (enclave.User, bool) {
+	if len(m.Users) == 0 || m.Cursor >= len(m.Users) {
+		return enclave.User{}, false
+	}
+
+	return m.Users[m.Cursor], true
 }
 
 func (m UsersModel) updateList(msg tea.Msg) (UsersModel, tea.Cmd) {
@@ -127,7 +145,7 @@ func (m UsersModel) updateList(msg tea.Msg) (UsersModel, tea.Cmd) {
 		case keyRight:
 			m.colOffset++
 
-		case "enter":
+		case keyEnter:
 			if _, ok := m.selectedUser(); ok {
 				m.mode = usersModeDescribe
 			}
@@ -210,26 +228,12 @@ func (m UsersModel) updateForm(msg tea.Msg) (UsersModel, tea.Cmd) {
 func (m UsersModel) updateDescribe(msg tea.Msg) (UsersModel, tea.Cmd) {
 	if key, ok := msg.(tea.KeyMsg); ok {
 		switch key.String() {
-		case "esc", "q":
+		case keyEsc, "q":
 			m.mode = usersModeList
 		}
 	}
 
 	return m, nil
-}
-
-// View renders the users table or the active overlay.
-func (m UsersModel) View() string {
-	switch m.mode {
-	case usersModeDescribe:
-		return m.renderDescribe()
-	case usersModeModal:
-		return m.renderList() + m.modal.View()
-	case usersModeForm:
-		return m.form.View()
-	}
-
-	return m.renderList()
 }
 
 func (m UsersModel) renderList() string {

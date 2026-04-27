@@ -65,14 +65,6 @@ func (m ResourceGroupsModel) IsCapturing() bool {
 	return m.mode != rgModeList
 }
 
-func (m ResourceGroupsModel) selectedRG() (enclave.ResourceGroup, bool) {
-	if len(m.RGs) == 0 || m.Cursor >= len(m.RGs) {
-		return enclave.ResourceGroup{}, false
-	}
-
-	return m.RGs[m.Cursor], true
-}
-
 // Update handles messages.
 func (m ResourceGroupsModel) Update(
 	msg tea.Msg,
@@ -84,12 +76,40 @@ func (m ResourceGroupsModel) Update(
 		return m.updateForm(msg)
 	case rgModeDescribe:
 		return m.updateDescribe(msg)
+	case rgModeList:
+		return m.updateList(msg)
 	}
 
 	return m.updateList(msg)
 }
 
-func (m ResourceGroupsModel) updateList(msg tea.Msg) (ResourceGroupsModel, tea.Cmd) {
+// View renders the resource groups table or the active overlay.
+func (m ResourceGroupsModel) View() string {
+	switch m.mode {
+	case rgModeDescribe:
+		return m.renderDescribe()
+	case rgModeModal:
+		return m.renderList() + m.modal.View()
+	case rgModeForm:
+		return m.form.View()
+	case rgModeList:
+		return m.renderList()
+	}
+
+	return m.renderList()
+}
+
+func (m ResourceGroupsModel) selectedRG() (enclave.ResourceGroup, bool) {
+	if len(m.RGs) == 0 || m.Cursor >= len(m.RGs) {
+		return enclave.ResourceGroup{}, false
+	}
+
+	return m.RGs[m.Cursor], true
+}
+
+func (m ResourceGroupsModel) updateList(
+	msg tea.Msg,
+) (ResourceGroupsModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case ResourceGroupsLoadedMsg:
 		m.Loading = false
@@ -126,7 +146,7 @@ func (m ResourceGroupsModel) updateList(msg tea.Msg) (ResourceGroupsModel, tea.C
 		case keyRight:
 			m.colOffset++
 
-		case "enter":
+		case keyEnter:
 			if _, ok := m.selectedRG(); ok {
 				m.mode = rgModeDescribe
 			}
@@ -151,7 +171,9 @@ func (m ResourceGroupsModel) updateList(msg tea.Msg) (ResourceGroupsModel, tea.C
 	return m, nil
 }
 
-func (m ResourceGroupsModel) updateModal(msg tea.Msg) (ResourceGroupsModel, tea.Cmd) {
+func (m ResourceGroupsModel) updateModal(
+	msg tea.Msg,
+) (ResourceGroupsModel, tea.Cmd) {
 	switch msg.(type) {
 	case ModalConfirmedMsg:
 		if rg, ok := m.selectedRG(); ok {
@@ -176,7 +198,9 @@ func (m ResourceGroupsModel) updateModal(msg tea.Msg) (ResourceGroupsModel, tea.
 	return m, nil
 }
 
-func (m ResourceGroupsModel) updateForm(msg tea.Msg) (ResourceGroupsModel, tea.Cmd) {
+func (m ResourceGroupsModel) updateForm(
+	msg tea.Msg,
+) (ResourceGroupsModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case FormSubmittedMsg:
 		if len(msg.Values) >= 1 {
@@ -209,29 +233,17 @@ func (m ResourceGroupsModel) updateForm(msg tea.Msg) (ResourceGroupsModel, tea.C
 	return m, nil
 }
 
-func (m ResourceGroupsModel) updateDescribe(msg tea.Msg) (ResourceGroupsModel, tea.Cmd) {
+func (m ResourceGroupsModel) updateDescribe(
+	msg tea.Msg,
+) (ResourceGroupsModel, tea.Cmd) {
 	if key, ok := msg.(tea.KeyMsg); ok {
 		switch key.String() {
-		case "esc", "q":
+		case keyEsc, "q":
 			m.mode = rgModeList
 		}
 	}
 
 	return m, nil
-}
-
-// View renders the resource groups table or the active overlay.
-func (m ResourceGroupsModel) View() string {
-	switch m.mode {
-	case rgModeDescribe:
-		return m.renderDescribe()
-	case rgModeModal:
-		return m.renderList() + m.modal.View()
-	case rgModeForm:
-		return m.form.View()
-	}
-
-	return m.renderList()
 }
 
 func (m ResourceGroupsModel) renderList() string {

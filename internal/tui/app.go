@@ -140,12 +140,14 @@ func (m AppModel) Update(
 		m.users, _ = m.users.Update(msg)
 		if msg.Err == nil {
 			m.users.Loading = true
+
 			return m, m.users.Load(m.client)
 		}
 	case views.UserCreatedMsg:
 		m.users, _ = m.users.Update(msg)
 		if msg.Err == nil {
 			m.users.Loading = true
+
 			return m, m.users.Load(m.client)
 		}
 
@@ -158,12 +160,14 @@ func (m AppModel) Update(
 		m.roles, _ = m.roles.Update(msg)
 		if msg.Err == nil {
 			m.roles.Loading = true
+
 			return m, m.roles.Load(m.client)
 		}
 	case views.RoleCreatedMsg:
 		m.roles, _ = m.roles.Update(msg)
 		if msg.Err == nil {
 			m.roles.Loading = true
+
 			return m, m.roles.Load(m.client)
 		}
 
@@ -176,12 +180,14 @@ func (m AppModel) Update(
 		m.resourceGroups, _ = m.resourceGroups.Update(msg)
 		if msg.Err == nil {
 			m.resourceGroups.Loading = true
+
 			return m, m.resourceGroups.Load(m.client)
 		}
 	case views.ResourceGroupCreatedMsg:
 		m.resourceGroups, _ = m.resourceGroups.Update(msg)
 		if msg.Err == nil {
 			m.resourceGroups.Loading = true
+
 			return m, m.resourceGroups.Load(m.client)
 		}
 
@@ -194,19 +200,20 @@ func (m AppModel) Update(
 		m.policies, _ = m.policies.Update(msg)
 		if msg.Err == nil {
 			m.policies.Loading = true
+
 			return m, m.policies.Load(m.client)
 		}
 	case views.PolicyCreatedMsg:
 		m.policies, _ = m.policies.Update(msg)
 		if msg.Err == nil {
 			m.policies.Loading = true
+
 			return m, m.policies.Load(m.client)
 		}
 
 	case tea.KeyMsg:
 		// Always allow quit.
-		switch msg.String() {
-		case "ctrl+c":
+		if msg.String() == "ctrl+c" {
 			return m, tea.Quit
 		}
 
@@ -417,6 +424,8 @@ func (m AppModel) isCapturing() bool {
 		return m.resourceGroups.IsCapturing()
 	case ViewPolicies:
 		return m.policies.IsCapturing()
+	case ViewTasks, ViewArtifacts, ViewTaskDetail:
+		return false
 	}
 
 	return false
@@ -555,7 +564,8 @@ func (m AppModel) createPolicyCmd(role, rg, method string) tea.Cmd {
 	}
 }
 
-// splitTrim splits a comma-separated string and trims whitespace from each part.
+// splitTrim splits a comma-separated string and trims whitespace from each
+// part.
 func splitTrim(s string) []string {
 	if s == "" {
 		return nil

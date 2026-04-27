@@ -19,6 +19,8 @@ const (
 	keyRight = "right"
 	keyK     = "k"
 	keyJ     = "j"
+	keyEnter = "enter"
+	keyEsc   = "esc"
 )
 
 // TasksLoadedMsg is returned by the Load command.

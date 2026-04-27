@@ -23,7 +23,8 @@ func NewModal(message string) ModalModel {
 // SetSize updates the terminal dimensions used for centering.
 func (m *ModalModel) SetSize(w, h int) { m.width = w; m.height = h }
 
-// Update handles modal key presses. Returns ModalConfirmedMsg or ModalCancelledMsg.
+// Update handles modal key presses. Returns ModalConfirmedMsg or
+// ModalCancelledMsg.
 func (m ModalModel) Update(msg tea.Msg) (ModalModel, tea.Cmd) {
 	if key, ok := msg.(tea.KeyMsg); ok {
 		switch key.String() {

@@ -65,14 +65,6 @@ func (m RolesModel) IsCapturing() bool {
 	return m.mode != rolesModeList
 }
 
-func (m RolesModel) selectedRole() (enclave.Role, bool) {
-	if len(m.Roles) == 0 || m.Cursor >= len(m.Roles) {
-		return enclave.Role{}, false
-	}
-
-	return m.Roles[m.Cursor], true
-}
-
 // Update handles messages.
 func (m RolesModel) Update(
 	msg tea.Msg,
@@ -84,9 +76,35 @@ func (m RolesModel) Update(
 		return m.updateForm(msg)
 	case rolesModeDescribe:
 		return m.updateDescribe(msg)
+	case rolesModeList:
+		return m.updateList(msg)
 	}
 
 	return m.updateList(msg)
+}
+
+// View renders the roles table or the active overlay.
+func (m RolesModel) View() string {
+	switch m.mode {
+	case rolesModeDescribe:
+		return m.renderDescribe()
+	case rolesModeModal:
+		return m.renderList() + m.modal.View()
+	case rolesModeForm:
+		return m.form.View()
+	case rolesModeList:
+		return m.renderList()
+	}
+
+	return m.renderList()
+}
+
+func (m RolesModel) selectedRole() (enclave.Role, bool) {
+	if len(m.Roles) == 0 || m.Cursor >= len(m.Roles) {
+		return enclave.Role{}, false
+	}
+
+	return m.Roles[m.Cursor], true
 }
 
 func (m RolesModel) updateList(msg tea.Msg) (RolesModel, tea.Cmd) {
@@ -126,7 +144,7 @@ func (m RolesModel) updateList(msg tea.Msg) (RolesModel, tea.Cmd) {
 		case keyRight:
 			m.colOffset++
 
-		case "enter":
+		case keyEnter:
 			if _, ok := m.selectedRole(); ok {
 				m.mode = rolesModeDescribe
 			}
@@ -212,26 +230,12 @@ func (m RolesModel) updateForm(msg tea.Msg) (RolesModel, tea.Cmd) {
 func (m RolesModel) updateDescribe(msg tea.Msg) (RolesModel, tea.Cmd) {
 	if key, ok := msg.(tea.KeyMsg); ok {
 		switch key.String() {
-		case "esc", "q":
+		case keyEsc, "q":
 			m.mode = rolesModeList
 		}
 	}
 
 	return m, nil
-}
-
-// View renders the roles table or the active overlay.
-func (m RolesModel) View() string {
-	switch m.mode {
-	case rolesModeDescribe:
-		return m.renderDescribe()
-	case rolesModeModal:
-		return m.renderList() + m.modal.View()
-	case rolesModeForm:
-		return m.form.View()
-	}
-
-	return m.renderList()
 }
 
 func (m RolesModel) renderList() string {

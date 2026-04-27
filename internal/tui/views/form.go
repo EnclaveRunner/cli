@@ -95,15 +95,6 @@ func (m FormModel) Update(msg tea.Msg) (FormModel, tea.Cmd) {
 	return m, cmd
 }
 
-func (m FormModel) submit() tea.Cmd {
-	vals := make([]string, len(m.inputs))
-	for i, in := range m.inputs {
-		vals[i] = in.Value()
-	}
-
-	return func() tea.Msg { return FormSubmittedMsg{Values: vals} }
-}
-
 // View renders the form centered on screen.
 func (m FormModel) View() string {
 	labelStyle := lipgloss.NewStyle().
@@ -121,7 +112,9 @@ func (m FormModel) View() string {
 	for i, f := range m.fields {
 		label := f.Label + ":"
 		if i == m.cursor {
-			b.WriteString(activeLabel.Render(label) + "  " + m.inputs[i].View() + "\n")
+			b.WriteString(
+				activeLabel.Render(label) + "  " + m.inputs[i].View() + "\n",
+			)
 		} else {
 			b.WriteString(labelStyle.Render(label) + "  " + m.inputs[i].View() + "\n")
 		}
@@ -131,7 +124,9 @@ func (m FormModel) View() string {
 	hint := styles.HelpKeyStyle.Render("ctrl+s") +
 		lipgloss.NewStyle().Foreground(styles.ColorSlateDark).Render(" submit   ") +
 		styles.HelpKeyStyle.Render("tab") +
-		lipgloss.NewStyle().Foreground(styles.ColorSlateDark).Render(" next field   ") +
+		lipgloss.NewStyle().
+			Foreground(styles.ColorSlateDark).
+			Render(" next field   ") +
 		styles.HelpKeyStyle.Render("esc") +
 		lipgloss.NewStyle().Foreground(styles.ColorSlateDark).Render(" cancel")
 	b.WriteString(hint + "\n")
@@ -141,4 +136,13 @@ func (m FormModel) View() string {
 	}
 
 	return b.String()
+}
+
+func (m FormModel) submit() tea.Cmd {
+	vals := make([]string, len(m.inputs))
+	for i := range m.inputs {
+		vals[i] = m.inputs[i].Value()
+	}
+
+	return func() tea.Msg { return FormSubmittedMsg{Values: vals} }
 }

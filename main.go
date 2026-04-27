@@ -1,10 +1,9 @@
 package main
 
 import (
+	"cli/cmd"
 	_ "embed"
 	"strings"
-
-	"cli/cmd"
 )
 
 //go:embed Version

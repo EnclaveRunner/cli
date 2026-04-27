@@ -112,7 +112,7 @@ func (m ArtifactsModel) Update(
 					}
 				}
 			}
-		case "esc":
+		case keyEsc:
 			if m.level > 0 {
 				m.Loading = true
 				lvl := m.level
